@@ -1,0 +1,67 @@
+version: "3.8"
+
+services:
+  # Journal Search API
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/journal_search
+      - DBOS_DATABASE_HOST=db
+      - DBOS_DATABASE_PORT=5432
+      - DBOS_DATABASE_USER=postgres
+      - DBOS_DATABASE_PASSWORD=postgres
+      - DBOS_DATABASE_NAME=journal_search
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - SUPABASE_STORAGE_BUCKET=journal-pages
+      - OCR_PROVIDER=tesseract
+      - EMBEDDING_PROVIDER=ollama
+      - EMBEDDING_MODEL=nomic-embed-text
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - DEBUG=true
+      - ALLOWED_ORIGINS=["http://localhost:3000"]
+    depends_on:
+      db:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+
+  # Local Postgres (for development without Supabase)
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=journal_search
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Ollama for local embeddings
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    # Pull the embedding model on startup
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        /bin/ollama serve &
+        sleep 5
+        /bin/ollama pull nomic-embed-text
+        wait
+
+volumes:
+  postgres_data:
+  ollama_data:
