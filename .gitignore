@@ -1,4 +1,5 @@
 # Generated OCR output
+scripts/ocr-output.txt
 scripts/*-output.txt
 
 # Python

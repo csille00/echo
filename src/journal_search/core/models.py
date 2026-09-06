@@ -68,10 +68,6 @@ class OCRResult(BaseModel):
     text: str
     confidence: float | None = None
     model: str
-    raw_response: dict | None = Field(
-        default=None,
-        description="Raw response from OCR provider for debugging",
-    )
 
 
 class EmbeddingResult(BaseModel):

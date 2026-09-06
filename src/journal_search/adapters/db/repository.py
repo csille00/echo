@@ -127,6 +127,23 @@ class EntryRepository:
         )
         await self._session.commit()
 
+    async def update_extracted_text(self, entry_id: UUID, extracted_text: str) -> None:
+        """Update only the extracted text (e.g. after LLM cleanup)."""
+        await self._session.execute(
+            text("""
+                UPDATE entries
+                SET extracted_text = :text,
+                    updated_at = :updated_at
+                WHERE id = :id
+            """),
+            {
+                "id": entry_id,
+                "text": extracted_text,
+                "updated_at": datetime.utcnow(),
+            },
+        )
+        await self._session.commit()
+
     async def update_entry_status(
         self,
         entry_id: UUID,

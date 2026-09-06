@@ -5,7 +5,13 @@ from uuid import UUID
 from dbos import DBOS
 
 from journal_search.core.models import EntryMetadata, ProcessingStatus
-from journal_search.dependencies import get_embedder, get_ocr, get_repository, get_storage
+from journal_search.dependencies import (
+    get_embedder,
+    get_ocr,
+    get_repository,
+    get_storage,
+    get_text_cleanup,
+)
 
 
 @DBOS.workflow()
@@ -38,10 +44,20 @@ async def process_journal_entry(
 
     # Step 3: OCR extraction
     try:
-        extracted_text = await ocr_extract_step(entry_id, image_data)
+        extracted_text, ocr_model = await ocr_extract_step(entry_id, image_data)
     except Exception as e:
         await mark_failed_step(entry_id, str(e))
         raise
+
+    # Step 3b: Optional LLM cleanup
+    cleanup = get_text_cleanup()
+    if cleanup is not None:
+        try:
+            extracted_text = await text_cleanup_step(extracted_text, ocr_model)
+            await update_entry_text_step(entry_id, extracted_text)
+        except Exception as e:
+            await mark_failed_step(entry_id, str(e))
+            raise
 
     # Step 4 & 5: Embed and store
     try:
@@ -81,7 +97,7 @@ async def create_entry_step(
 
 
 @DBOS.step()
-async def ocr_extract_step(entry_id: UUID, image_data: bytes) -> str:
+async def ocr_extract_step(entry_id: UUID, image_data: bytes) -> tuple[str, str]:
     """Extract text via OCR - checkpointed and retryable."""
     ocr = get_ocr()
     repo = get_repository()
@@ -95,7 +111,25 @@ async def ocr_extract_step(entry_id: UUID, image_data: bytes) -> str:
         ocr_confidence=result.confidence,
     )
 
+    return result.text, result.model
+
+
+@DBOS.step()
+async def text_cleanup_step(raw_text: str, source_model: str) -> str:
+    """Clean OCR text with an LLM - checkpointed and retryable."""
+    cleanup = get_text_cleanup()
+    if cleanup is None:
+        return raw_text
+
+    result = await cleanup.cleanup(raw_text, source_model=source_model)
     return result.text
+
+
+@DBOS.step()
+async def update_entry_text_step(entry_id: UUID, extracted_text: str) -> None:
+    """Persist cleaned text after LLM post-processing."""
+    repo = get_repository()
+    await repo.update_extracted_text(entry_id, extracted_text)
 
 
 @DBOS.step()

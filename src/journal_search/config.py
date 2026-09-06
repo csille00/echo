@@ -2,8 +2,9 @@
 
 from enum import Enum
 from functools import lru_cache
+import os
 
-from pydantic import Field, PostgresDsn, SecretStr
+from pydantic import Field, PostgresDsn, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -79,6 +80,12 @@ class Settings(BaseSettings):
         description="Path to Google service account JSON for Vision OCR",
     )
 
+    @model_validator(mode="after")
+    def resolve_google_credentials(self) -> "Settings":
+        if self.google_vision_credentials_file is None:
+            self.google_vision_credentials_file = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+        return self
+
     # Ollama (optional)
     ollama_base_url: str = Field(
         default="http://localhost:11434",
@@ -93,6 +100,10 @@ class Settings(BaseSettings):
     llm_model: str = Field(
         default="llama3.2",
         description="Model name for OCR text cleanup",
+    )
+    llm_cleanup_enabled: bool = Field(
+        default=False,
+        description="Run LLM cleanup on OCR output in the processing pipeline",
     )
 
     # App settings

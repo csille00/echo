@@ -1,7 +1,9 @@
 """Google Cloud Vision OCR adapter."""
 
+import asyncio
 import base64
 import os
+import time
 from typing import Any
 
 import httpx
@@ -12,6 +14,7 @@ from journal_search.core.models import OCRResult
 
 _VISION_API_URL = "https://vision.googleapis.com/v1/images:annotate"
 _VISION_SCOPE = "https://www.googleapis.com/auth/cloud-vision"
+_TOKEN_REFRESH_BUFFER_SECONDS = 60
 
 
 class GoogleVisionOCR:
@@ -21,24 +24,24 @@ class GoogleVisionOCR:
         self,
         api_key: str | None = None,
         credentials_file: str | None = None,
+        *,
+        client: httpx.AsyncClient | None = None,
     ) -> None:
-        self._api_key = api_key or os.environ.get("GOOGLE_VISION_API_KEY")
-        self._credentials_file = (
-            credentials_file
-            or os.environ.get("GOOGLE_VISION_CREDENTIALS_FILE")
-            or os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-        )
-
-        if not self._api_key and not self._credentials_file:
+        if not api_key and not credentials_file:
             raise ValueError(
-                "Google Vision credentials required. Set either "
-                "GOOGLE_VISION_API_KEY or GOOGLE_APPLICATION_CREDENTIALS."
+                "Google Vision credentials required. Provide api_key or credentials_file."
             )
 
-        if self._credentials_file and not os.path.isfile(self._credentials_file):
-            raise ValueError(
-                f"Google Vision credentials file not found: {self._credentials_file}"
-            )
+        if credentials_file and not api_key:
+            if not os.path.isfile(credentials_file):
+                raise ValueError(f"Google Vision credentials file not found: {credentials_file}")
+
+        self._api_key = api_key
+        self._credentials_file = credentials_file
+        self._client = client or httpx.AsyncClient()
+        self._owns_client = client is None
+        self._access_token: str | None = None
+        self._token_expiry: float = 0.0
 
     @property
     def name(self) -> str:
@@ -46,6 +49,11 @@ class GoogleVisionOCR:
 
     def supported_formats(self) -> list[str]:
         return ["png", "jpg", "jpeg", "webp", "tiff", "bmp", "gif"]
+
+    async def close(self) -> None:
+        """Close the underlying HTTP client if owned by this adapter."""
+        if self._owns_client:
+            await self._client.aclose()
 
     async def extract(self, image_data: bytes, format_hint: str | None = None) -> OCRResult:
         """Extract text using Google Cloud Vision API."""
@@ -63,18 +71,17 @@ class GoogleVisionOCR:
         if self._api_key:
             params["key"] = self._api_key
         else:
-            headers["Authorization"] = f"Bearer {_get_access_token(self._credentials_file)}"
+            headers["Authorization"] = f"Bearer {await self._get_access_token()}"
 
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                _VISION_API_URL,
-                params=params,
-                headers=headers,
-                json=payload,
-                timeout=60.0,
-            )
-            response.raise_for_status()
-            data = response.json()
+        response = await self._client.post(
+            _VISION_API_URL,
+            params=params,
+            headers=headers,
+            json=payload,
+            timeout=60.0,
+        )
+        response.raise_for_status()
+        data = response.json()
 
         first_response = data.get("responses", [{}])[0]
         if "error" in first_response:
@@ -88,15 +95,26 @@ class GoogleVisionOCR:
             text=text.strip(),
             confidence=_average_symbol_confidence(annotation),
             model=self.name,
-            raw_response=None,
         )
 
+    async def _get_access_token(self) -> str:
+        if not self._credentials_file:
+            raise ValueError("Service account credentials file path is required")
 
-def _get_access_token(credentials_file: str | None) -> str:
-    """Get a short-lived access token from a service account JSON file."""
-    if not credentials_file:
-        raise ValueError("Service account credentials file path is required")
+        now = time.time()
+        if self._access_token and now < self._token_expiry - _TOKEN_REFRESH_BUFFER_SECONDS:
+            return self._access_token
 
+        token, expiry = await asyncio.to_thread(
+            _refresh_service_account_token,
+            self._credentials_file,
+        )
+        self._access_token = token
+        self._token_expiry = expiry
+        return token
+
+
+def _refresh_service_account_token(credentials_file: str) -> tuple[str, float]:
     credentials = service_account.Credentials.from_service_account_file(
         credentials_file,
         scopes=[_VISION_SCOPE],
@@ -105,7 +123,9 @@ def _get_access_token(credentials_file: str | None) -> str:
     token = credentials.token
     if not token:
         raise RuntimeError("Failed to obtain Google Vision access token")
-    return token
+
+    expiry = credentials.expiry.timestamp() if credentials.expiry else time.time() + 3600
+    return token, expiry
 
 
 def _average_symbol_confidence(annotation: dict[str, Any]) -> float | None:

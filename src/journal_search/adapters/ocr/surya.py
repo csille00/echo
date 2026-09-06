@@ -4,11 +4,10 @@ import asyncio
 import re
 from concurrent.futures import ThreadPoolExecutor
 from html import unescape
-from io import BytesIO
 
-from PIL import Image
 from surya.recognition import RecognitionPredictor
 
+from journal_search.adapters.ocr.image_utils import open_image
 from journal_search.core.models import OCRResult
 
 
@@ -27,48 +26,44 @@ class SuryaOCR:
     def supported_formats(self) -> list[str]:
         return ["png", "jpg", "jpeg", "webp", "tiff", "bmp"]
 
+    async def close(self) -> None:
+        """Shut down the thread pool used for OCR."""
+        self._executor.shutdown(wait=False, cancel_futures=True)
+
     async def extract(self, image_data: bytes, format_hint: str | None = None) -> OCRResult:
         """Extract text using Surya OCR."""
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
             self._executor,
             self._extract_sync,
             image_data,
+            format_hint,
         )
 
-    def _load_model(self) -> None:
+    def _load_model(self) -> RecognitionPredictor:
         """Lazy load the Surya model."""
         if self._predictor is None:
             self._predictor = RecognitionPredictor()
+        return self._predictor
 
-    def _extract_sync(self, image_data: bytes) -> OCRResult:
+    def _extract_sync(self, image_data: bytes, format_hint: str | None) -> OCRResult:
         """Synchronous extraction - runs in thread pool."""
-        self._load_model()
-        assert self._predictor is not None
+        predictor = self._load_model()
+        image = open_image(image_data, format_hint)
 
-        image = Image.open(BytesIO(image_data))
-        if image.mode != "RGB":
-            image = image.convert("RGB")
+        results = predictor([image], full_page=True)
 
-        # Run full-page OCR (most accurate for handwritten text)
-        results = self._predictor([image], full_page=True)
-
-        # Extract text from block-level HTML output
         text_blocks: list[str] = []
-
         for page in results:
             for block in page.blocks:
                 if block.skipped or block.error or not block.html:
                     continue
                 text_blocks.append(_html_to_text(block.html))
 
-        full_text = "\n".join(text_blocks)
-
         return OCRResult(
-            text=full_text.strip(),
-            confidence=None,
+            text="\n".join(text_blocks).strip(),
+            confidence=None,  # Surya does not expose per-block confidence scores
             model=self.name,
-            raw_response=None,
         )
 
 

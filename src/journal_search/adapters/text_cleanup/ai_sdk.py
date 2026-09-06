@@ -1,11 +1,12 @@
 """Text cleanup via the Vercel AI SDK for Python."""
 
-import os
-
 import ai
 
 from journal_search.adapters.text_cleanup.prompt import SYSTEM_PROMPT
 from journal_search.core.models import TextCleanupResult
+
+# Ollama's OpenAI-compatible endpoint requires an api_key field but ignores the value.
+_OLLAMA_PLACEHOLDER_API_KEY = "ollama"
 
 
 class AISDKTextCleanup:
@@ -18,22 +19,22 @@ class AISDKTextCleanup:
         base_url: str | None = None,
         api_key: str | None = None,
     ) -> None:
-        self._ai = ai
         self._provider_name = provider
         self._model_name = model
 
         if provider == "ollama":
-            ollama_base = (base_url or os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")).rstrip("/")
+            if not base_url:
+                raise ValueError("Ollama base URL required")
+            ollama_base = base_url.rstrip("/")
             ai_provider = ai.get_provider(
                 "openai",
                 base_url=f"{ollama_base}/v1",
-                api_key=api_key or "ollama",
+                api_key=api_key or _OLLAMA_PLACEHOLDER_API_KEY,
             )
         elif provider == "openai":
-            resolved_key = api_key or os.environ.get("OPENAI_API_KEY")
-            if not resolved_key:
-                raise ValueError("OpenAI API key required. Set OPENAI_API_KEY env var.")
-            ai_provider = ai.get_provider("openai", api_key=resolved_key)
+            if not api_key:
+                raise ValueError("OpenAI API key required")
+            ai_provider = ai.get_provider("openai", api_key=api_key)
         else:
             raise ValueError(f"Unknown LLM provider: {provider}")
 
@@ -49,16 +50,13 @@ class AISDKTextCleanup:
         source_model: str | None = None,
     ) -> TextCleanupResult:
         messages = [
-            self._ai.system_message(SYSTEM_PROMPT),
-            self._ai.user_message(raw_text),
+            ai.system_message(SYSTEM_PROMPT),
+            ai.user_message(raw_text),
         ]
-        params = self._ai.InferenceRequestParams().with_temperature(0.2)
+        params = ai.InferenceRequestParams().with_temperature(0.2)
 
-        async with self._ai.stream(self._model, messages, params=params) as stream:
-            async for _event in stream:
-                pass
-
-        cleaned = stream.text.strip()
+        response = await ai.experimental_generate(self._model, messages, params=params)
+        cleaned = response.text.strip()
         if not cleaned:
             raise RuntimeError("LLM returned empty cleanup response")
 

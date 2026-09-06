@@ -31,9 +31,10 @@ class TestTesseractOCR:
         image_data = buf.getvalue()
 
         with patch("journal_search.adapters.ocr.tesseract.pytesseract") as mock_pytesseract:
-            mock_pytesseract.image_to_string.return_value = "Hello World"
             mock_pytesseract.image_to_data.return_value = {
-                "conf": [95, 90, -1, 85],
+                "text": ["Hello", "World"],
+                "conf": [95, 90],
+                "line_num": [1, 1],
             }
             mock_pytesseract.Output.DICT = "dict"
 
@@ -41,4 +42,4 @@ class TestTesseractOCR:
 
             assert result.text == "Hello World"
             assert result.model == "tesseract:eng"
-            assert result.confidence == pytest.approx(0.9, rel=0.01)
+            assert result.confidence == pytest.approx(0.925, rel=0.01)

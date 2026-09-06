@@ -1,6 +1,5 @@
 """FastAPI application factory."""
 
-import os
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
@@ -13,8 +12,9 @@ from journal_search.api.routes import entries
 from journal_search.config import Settings, get_settings
 from journal_search.dependencies import (
     Container,
-    create_embedding_provider,
-    create_ocr_provider,
+    create_embedding_provider_from_settings,
+    create_ocr_provider_from_settings,
+    create_text_cleanup_provider_from_settings,
 )
 from journal_search.adapters.storage.supabase import SupabaseStorage
 
@@ -24,50 +24,32 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan - setup and teardown."""
     settings = get_settings()
 
-    # Initialize Supabase client
     supabase = await acreate_client(
         settings.supabase_url,
         settings.supabase_key.get_secret_value(),
     )
 
-    # Create providers based on config
-    ocr_kwargs: dict[str, object] = {}
-    if settings.ocr_provider.value == "google_vision":
-        if settings.google_vision_api_key is not None:
-            ocr_kwargs["api_key"] = settings.google_vision_api_key.get_secret_value()
-        elif settings.google_vision_credentials_file is not None:
-            ocr_kwargs["credentials_file"] = settings.google_vision_credentials_file
-        elif os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
-            ocr_kwargs["credentials_file"] = os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
-        else:
-            raise RuntimeError(
-                "Google Vision credentials required. Set GOOGLE_VISION_API_KEY or "
-                "GOOGLE_APPLICATION_CREDENTIALS."
-            )
-
-    ocr = create_ocr_provider(settings.ocr_provider.value, **ocr_kwargs)
-    embedder = create_embedding_provider(
-        settings.embedding_provider.value,
-        model=settings.embedding_model,
-        dimension=settings.embedding_dimension,
-        base_url=settings.ollama_base_url,
-    )
+    ocr = create_ocr_provider_from_settings(settings)
+    embedder = create_embedding_provider_from_settings(settings)
     storage = SupabaseStorage(supabase, settings.supabase_storage_bucket)
+    text_cleanup = create_text_cleanup_provider_from_settings(settings)
 
-    # Create and install container
-    container = Container(ocr=ocr, embedder=embedder, storage=storage)
+    container = Container(
+        ocr=ocr,
+        embedder=embedder,
+        storage=storage,
+        text_cleanup=text_cleanup,
+    )
     container.install()
 
-    # Store in app state for route access
     app.state.supabase = supabase
     app.state.container = container
 
-    # Initialize DBOS
     DBOS.launch()
 
     yield
 
-    # Cleanup
+    await container.close()
     DBOS.destroy()
 
 
@@ -83,7 +65,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS middleware
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins,
@@ -92,7 +73,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Include routers
     app.include_router(entries.router, prefix="/api/v1")
 
     @app.get("/health")
