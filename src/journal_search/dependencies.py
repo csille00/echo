@@ -8,7 +8,6 @@ from journal_search.adapters.embedders.ollama import OllamaEmbedder
 from journal_search.adapters.ocr.google_vision import GoogleVisionOCR
 from journal_search.adapters.ocr.surya import SuryaOCR
 from journal_search.adapters.ocr.tesseract import TesseractOCR
-from journal_search.adapters.storage.supabase import SupabaseStorage
 from journal_search.adapters.text_cleanup.ai_sdk import AISDKTextCleanup
 from journal_search.config import Settings
 from journal_search.ports.embedder import EmbeddingProvider

@@ -41,7 +41,11 @@ class TesseractOCR:
         """Synchronous extraction - runs in thread pool."""
         image = open_image(image_data, format_hint)
 
-        data = pytesseract.image_to_data(image, lang=self._lang, output_type=pytesseract.Output.DICT)
+        data = pytesseract.image_to_data(
+            image,
+            lang=self._lang,
+            output_type=pytesseract.Output.DICT,
+        )
         text = _text_from_tesseract_data(data)
 
         confidences = [c for c in data["conf"] if c != -1]

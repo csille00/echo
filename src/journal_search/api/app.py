@@ -1,13 +1,14 @@
 """FastAPI application factory."""
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 from dbos import DBOS
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import acreate_client
 
+from journal_search.adapters.storage.supabase import SupabaseStorage
 from journal_search.api.routes import entries
 from journal_search.config import Settings, get_settings
 from journal_search.dependencies import (
@@ -16,7 +17,6 @@ from journal_search.dependencies import (
     create_ocr_provider_from_settings,
     create_text_cleanup_provider_from_settings,
 )
-from journal_search.adapters.storage.supabase import SupabaseStorage
 
 
 @asynccontextmanager

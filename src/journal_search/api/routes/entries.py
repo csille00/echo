@@ -61,7 +61,7 @@ async def get_current_user_id(request: Request) -> UUID:
     try:
         return UUID(user_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid user ID format")
+        raise HTTPException(status_code=400, detail="Invalid user ID format") from None
 
 
 CurrentUser = Annotated[UUID, Depends(get_current_user_id)]

@@ -1,7 +1,8 @@
 """Tests for embedding adapters."""
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
 from journal_search.adapters.embedders.ollama import OllamaEmbedder
 

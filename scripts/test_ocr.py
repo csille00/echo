@@ -35,13 +35,19 @@ async def main() -> None:
             image_data = buf.getvalue()
 
             result = await ocr.extract(image_data)
-            print(f"Confidence: {result.confidence:.2%}" if result.confidence else "Confidence: N/A")
+            confidence = (
+                f"Confidence: {result.confidence:.2%}" if result.confidence else "Confidence: N/A"
+            )
+            print(confidence)
             print(f"Text:\n{result.text}")
     else:
         print(f"Processing image: {path}")
         image_data = path.read_bytes()
         result = await ocr.extract(image_data)
-        print(f"Confidence: {result.confidence:.2%}" if result.confidence else "Confidence: N/A")
+        confidence = (
+            f"Confidence: {result.confidence:.2%}" if result.confidence else "Confidence: N/A"
+        )
+        print(confidence)
         print(f"Text:\n{result.text}")
 
 

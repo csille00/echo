@@ -1,13 +1,13 @@
 """Core domain models."""
 
 from datetime import date, datetime
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 
-class ProcessingStatus(str, Enum):
+class ProcessingStatus(StrEnum):
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"

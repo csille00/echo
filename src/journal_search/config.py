@@ -1,25 +1,25 @@
 """Application configuration with Pydantic Settings."""
 
-from enum import Enum
-from functools import lru_cache
 import os
+from enum import StrEnum
+from functools import lru_cache
 
 from pydantic import Field, PostgresDsn, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class OCRProvider(str, Enum):
+class OCRProvider(StrEnum):
     TESSERACT = "tesseract"
     SURYA = "surya"
     GOOGLE_VISION = "google_vision"
 
 
-class EmbeddingProvider(str, Enum):
+class EmbeddingProvider(StrEnum):
     OPENAI = "openai"
     OLLAMA = "ollama"
 
 
-class LLMProvider(str, Enum):
+class LLMProvider(StrEnum):
     OPENAI = "openai"
     OLLAMA = "ollama"
 
@@ -32,9 +32,7 @@ class Settings(BaseSettings):
     )
 
     # Database
-    database_url: PostgresDsn = Field(
-        description="PostgreSQL connection string (Supabase)"
-    )
+    database_url: PostgresDsn = Field(description="PostgreSQL connection string (Supabase)")
 
     # Supabase
     supabase_url: str = Field(description="Supabase project URL")

@@ -32,9 +32,8 @@ class GoogleVisionOCR:
                 "Google Vision credentials required. Provide api_key or credentials_file."
             )
 
-        if credentials_file and not api_key:
-            if not os.path.isfile(credentials_file):
-                raise ValueError(f"Google Vision credentials file not found: {credentials_file}")
+        if credentials_file and not api_key and not os.path.isfile(credentials_file):
+            raise ValueError(f"Google Vision credentials file not found: {credentials_file}")
 
         self._api_key = api_key
         self._credentials_file = credentials_file

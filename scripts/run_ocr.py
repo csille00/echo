@@ -24,7 +24,7 @@ def load_image(path: Path) -> list[tuple[str, bytes]]:
         for i, img in enumerate(images):
             buf = BytesIO()
             img.save(buf, format="PNG")
-            results.append((f"{path.name} (page {i+1})", buf.getvalue()))
+            results.append((f"{path.name} (page {i + 1})", buf.getvalue()))
         return results
     return [(path.name, path.read_bytes())]
 
@@ -36,7 +36,11 @@ async def main() -> None:
 
     settings = get_settings()
     parser = argparse.ArgumentParser(description="Run Google Vision OCR on a test scan")
-    parser.add_argument("image", nargs="?", help="Path to image file (defaults to first in test-data/)")
+    parser.add_argument(
+        "image",
+        nargs="?",
+        help="Path to image file (defaults to first in test-data/)",
+    )
     parser.add_argument(
         "-o",
         "--output",
