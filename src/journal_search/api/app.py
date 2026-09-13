@@ -1,56 +1,12 @@
 """FastAPI application factory."""
 
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
-
-from dbos import DBOS
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from supabase import acreate_client
 
-from journal_search.adapters.storage.supabase import SupabaseStorage
-from journal_search.api.routes import entries
+from journal_search.api.lifespan import lifespan
+from journal_search.api.middleware import configure_middleware
+from journal_search.api.router import register_routes
 from journal_search.config import Settings, get_settings
-from journal_search.dependencies import (
-    Container,
-    create_embedding_provider_from_settings,
-    create_ocr_provider_from_settings,
-    create_text_cleanup_provider_from_settings,
-)
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Application lifespan - setup and teardown."""
-    settings = get_settings()
-
-    supabase = await acreate_client(
-        settings.supabase_url,
-        settings.supabase_key.get_secret_value(),
-    )
-
-    ocr = create_ocr_provider_from_settings(settings)
-    embedder = create_embedding_provider_from_settings(settings)
-    storage = SupabaseStorage(supabase, settings.supabase_storage_bucket)
-    text_cleanup = create_text_cleanup_provider_from_settings(settings)
-
-    container = Container(
-        ocr=ocr,
-        embedder=embedder,
-        storage=storage,
-        text_cleanup=text_cleanup,
-    )
-    container.install()
-
-    app.state.supabase = supabase
-    app.state.container = container
-
-    DBOS.launch()
-
-    yield
-
-    await container.close()
-    DBOS.destroy()
+from journal_search.dbos_setup import init_dbos
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -65,18 +21,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
 
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.allowed_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
-    app.include_router(entries.router, prefix="/api/v1")
-
-    @app.get("/health")
-    async def health() -> dict[str, str]:
-        return {"status": "ok"}
+    init_dbos(settings, fastapi=app)
+    configure_middleware(app, settings)
+    register_routes(app)
 
     return app

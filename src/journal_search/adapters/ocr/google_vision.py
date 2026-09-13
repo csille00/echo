@@ -10,6 +10,7 @@ import httpx
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 
+from journal_search.adapters.ocr.reading_order import text_from_bounding_boxes
 from journal_search.core.models import OCRResult
 
 _VISION_API_URL = "https://vision.googleapis.com/v1/images:annotate"
@@ -88,7 +89,7 @@ class GoogleVisionOCR:
             raise RuntimeError(message)
 
         annotation = first_response.get("fullTextAnnotation", {})
-        text = annotation.get("text", "")
+        text = text_from_bounding_boxes(annotation)
 
         return OCRResult(
             text=text.strip(),

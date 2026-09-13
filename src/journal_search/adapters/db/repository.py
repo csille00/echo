@@ -11,6 +11,7 @@ from journal_search.core.models import (
     EntryMetadata,
     JournalEntry,
     ProcessingStatus,
+    SearchResult,
 )
 
 
@@ -20,14 +21,14 @@ class EntryRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def create_entry(
+    async def create_pending_entry(
         self,
         user_id: UUID,
-        storage_path: str,
         metadata: EntryMetadata,
     ) -> JournalEntry:
-        """Create a new journal entry."""
+        """Create a journal entry before async processing starts."""
         entry_id = uuid4()
+        storage_path = f"pending/{entry_id}"
         now = datetime.utcnow()
 
         await self._session.execute(
@@ -65,6 +66,23 @@ class EntryRepository:
             created_at=now,
             updated_at=now,
         )
+
+    async def update_storage_path(self, entry_id: UUID, storage_path: str) -> None:
+        """Set the storage path after the image upload completes."""
+        await self._session.execute(
+            text("""
+                UPDATE entries
+                SET storage_path = :storage_path,
+                    updated_at = :updated_at
+                WHERE id = :id
+            """),
+            {
+                "id": entry_id,
+                "storage_path": storage_path,
+                "updated_at": datetime.utcnow(),
+            },
+        )
+        await self._session.commit()
 
     async def get_entry(self, entry_id: UUID, user_id: UUID) -> JournalEntry | None:
         """Get an entry by ID, scoped to user."""
@@ -182,6 +200,7 @@ class EntryRepository:
 
         for idx, (chunk_text, embedding) in enumerate(zip(chunks, embeddings, strict=True)):
             emb_id = uuid4()
+            embedding_literal = "[" + ",".join(str(v) for v in embedding) + "]"
             await self._session.execute(
                 text("""
                     INSERT INTO embeddings (
@@ -189,7 +208,7 @@ class EntryRepository:
                         embedding, model, created_at
                     ) VALUES (
                         :id, :entry_id, :user_id, :chunk_index, :chunk_text,
-                        :embedding, :model, :created_at
+                        CAST(:embedding AS vector), :model, :created_at
                     )
                 """),
                 {
@@ -198,7 +217,7 @@ class EntryRepository:
                     "user_id": user_id,
                     "chunk_index": idx,
                     "chunk_text": chunk_text,
-                    "embedding": embedding,
+                    "embedding": embedding_literal,
                     "model": model,
                     "created_at": now,
                 },
@@ -263,6 +282,48 @@ class EntryRepository:
                 error_message=row["error_message"],
                 created_at=row["created_at"],
                 updated_at=row["updated_at"],
+            )
+            for row in result.mappings()
+        ]
+
+    async def search_similar(
+        self,
+        user_id: UUID,
+        query_embedding: list[float],
+        limit: int = 10,
+    ) -> list[SearchResult]:
+        """Find entries most similar to a query embedding (cosine distance)."""
+        embedding_literal = "[" + ",".join(str(v) for v in query_embedding) + "]"
+        result = await self._session.execute(
+            text("""
+                SELECT
+                    e.id AS entry_id,
+                    e.journal_date,
+                    e.tags,
+                    emb.chunk_text,
+                    1 - (emb.embedding <=> CAST(:query_embedding AS vector)) AS similarity
+                FROM embeddings emb
+                JOIN entries e ON e.id = emb.entry_id
+                WHERE emb.user_id = :user_id
+                  AND e.processing_status = :status
+                ORDER BY emb.embedding <=> CAST(:query_embedding AS vector)
+                LIMIT :limit
+            """),
+            {
+                "user_id": user_id,
+                "query_embedding": embedding_literal,
+                "status": ProcessingStatus.COMPLETED.value,
+                "limit": limit,
+            },
+        )
+
+        return [
+            SearchResult(
+                entry_id=row["entry_id"],
+                chunk_text=row["chunk_text"],
+                similarity=float(row["similarity"]),
+                journal_date=row["journal_date"],
+                tags=row["tags"] or [],
             )
             for row in result.mappings()
         ]

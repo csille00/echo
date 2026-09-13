@@ -1,100 +1,91 @@
 """Dependency injection container."""
 
-from contextvars import ContextVar
 from typing import cast
 
-from journal_search.adapters.db.repository import EntryRepository
+from journal_search.adapters.ai_sdk import AISDK
 from journal_search.adapters.embedders.ollama import OllamaEmbedder
 from journal_search.adapters.ocr.google_vision import GoogleVisionOCR
 from journal_search.adapters.ocr.surya import SuryaOCR
 from journal_search.adapters.ocr.tesseract import TesseractOCR
-from journal_search.adapters.text_cleanup.ai_sdk import AISDKTextCleanup
-from journal_search.config import Settings
+from journal_search.adapters.text_cleanup.cleanup import TextCleanup
+from journal_search.config import LLMProvider, Settings
+from journal_search.adapters.supabase.client import SupabaseClient
+from journal_search.ports.auth import AuthProvider
 from journal_search.ports.embedder import EmbeddingProvider
+from journal_search.ports.llm import LLMService
 from journal_search.ports.ocr import OCRProvider
+from journal_search.ports.realtime import RealtimeProvider
 from journal_search.ports.storage import StorageProvider
 from journal_search.ports.text_cleanup import TextCleanupProvider
 
-# Context variables for request-scoped dependencies
-_ocr_provider: ContextVar[OCRProvider] = ContextVar("ocr_provider")
-_embedding_provider: ContextVar[EmbeddingProvider] = ContextVar("embedding_provider")
-_storage_provider: ContextVar[StorageProvider] = ContextVar("storage_provider")
-_entry_repository: ContextVar[EntryRepository] = ContextVar("entry_repository")
-_text_cleanup_provider: ContextVar[TextCleanupProvider | None] = ContextVar(
-    "text_cleanup_provider",
-    default=None,
-)
+_app_container: "Container | None" = None
 
 
-def set_ocr(provider: OCRProvider) -> None:
-    """Set the OCR provider for the current context."""
-    _ocr_provider.set(provider)
+def set_app_container(container: "Container") -> None:
+    """Register the application container for workflow and API access."""
+    global _app_container
+    _app_container = container
+
+
+def _require_container() -> "Container":
+    if _app_container is None:
+        raise RuntimeError("Application container not initialized")
+    return _app_container
 
 
 def get_ocr() -> OCRProvider:
-    """Get the OCR provider for the current context."""
-    return _ocr_provider.get()
-
-
-def set_embedder(provider: EmbeddingProvider) -> None:
-    """Set the embedding provider for the current context."""
-    _embedding_provider.set(provider)
+    """Get the OCR provider."""
+    return _require_container().ocr
 
 
 def get_embedder() -> EmbeddingProvider:
-    """Get the embedding provider for the current context."""
-    return _embedding_provider.get()
-
-
-def set_storage(provider: StorageProvider) -> None:
-    """Set the storage provider for the current context."""
-    _storage_provider.set(provider)
+    """Get the embedding provider."""
+    return _require_container().embedder
 
 
 def get_storage() -> StorageProvider:
-    """Get the storage provider for the current context."""
-    return _storage_provider.get()
+    """Get the storage provider."""
+    return _require_container().storage
 
 
-def set_repository(repo: EntryRepository) -> None:
-    """Set the entry repository for the current context."""
-    _entry_repository.set(repo)
+def get_auth() -> AuthProvider:
+    """Get the auth provider."""
+    return _require_container().auth
 
 
-def get_repository() -> EntryRepository:
-    """Get the entry repository for the current context."""
-    return _entry_repository.get()
-
-
-def set_text_cleanup(provider: TextCleanupProvider | None) -> None:
-    """Set the optional text cleanup provider for the current context."""
-    _text_cleanup_provider.set(provider)
+def get_realtime() -> RealtimeProvider:
+    """Get the realtime provider."""
+    return _require_container().realtime
 
 
 def get_text_cleanup() -> TextCleanupProvider | None:
-    """Get the optional text cleanup provider for the current context."""
-    return _text_cleanup_provider.get()
+    """Get the optional text cleanup provider."""
+    container = _app_container
+    return container._text_cleanup if container is not None else None
 
 
 class Container:
-    """
-    Dependency container for bootstrapping the application.
-
-    This creates and holds singleton instances of adapters
-    based on configuration.
-    """
+    """Dependency container for bootstrapping the application."""
 
     def __init__(
         self,
         ocr: OCRProvider | None = None,
         embedder: EmbeddingProvider | None = None,
         storage: StorageProvider | None = None,
+        auth: AuthProvider | None = None,
+        realtime: RealtimeProvider | None = None,
+        ai_sdk: AISDK | None = None,
         text_cleanup: TextCleanupProvider | None = None,
+        supabase: SupabaseClient | None = None,
     ) -> None:
         self._ocr = ocr
         self._embedder = embedder
         self._storage = storage
+        self._auth = auth
+        self._realtime = realtime
+        self._ai_sdk = ai_sdk
         self._text_cleanup = text_cleanup
+        self._supabase = supabase
 
     @property
     def ocr(self) -> OCRProvider:
@@ -115,18 +106,30 @@ class Container:
         return self._storage
 
     @property
+    def auth(self) -> AuthProvider:
+        if self._auth is None:
+            raise RuntimeError("Auth provider not configured")
+        return self._auth
+
+    @property
+    def realtime(self) -> RealtimeProvider:
+        if self._realtime is None:
+            raise RuntimeError("Realtime provider not configured")
+        return self._realtime
+
+    @property
+    def ai_sdk(self) -> AISDK:
+        if self._ai_sdk is None:
+            raise RuntimeError("AI SDK not configured")
+        return self._ai_sdk
+
+    @property
     def text_cleanup(self) -> TextCleanupProvider | None:
         return self._text_cleanup
 
     def install(self) -> None:
-        """Install providers into context variables."""
-        if self._ocr:
-            set_ocr(self._ocr)
-        if self._embedder:
-            set_embedder(self._embedder)
-        if self._storage:
-            set_storage(self._storage)
-        set_text_cleanup(self._text_cleanup)
+        """Register this container as the application singleton."""
+        set_app_container(self)
 
     async def close(self) -> None:
         """Release adapter resources such as HTTP clients and thread pools."""
@@ -134,6 +137,8 @@ class Container:
             await self._ocr.close()
         if self._text_cleanup is not None and hasattr(self._text_cleanup, "close"):
             await self._text_cleanup.close()
+        if self._supabase is not None:
+            await self._supabase.close()
 
 
 def create_ocr_provider(provider_name: str, **kwargs: object) -> OCRProvider:
@@ -154,20 +159,21 @@ def create_embedding_provider(provider_name: str, **kwargs: object) -> Embedding
     raise ValueError(f"Unknown embedding provider: {provider_name}")
 
 
-def create_text_cleanup_provider(
-    provider_name: str,
-    *,
-    model: str,
-    base_url: str | None = None,
-    api_key: str | None = None,
-) -> TextCleanupProvider:
-    """Factory for creating text cleanup providers."""
-    return AISDKTextCleanup(
-        provider=provider_name,
-        model=model,
-        base_url=base_url,
-        api_key=api_key,
+def create_ai_sdk_from_settings(settings: Settings) -> AISDK | None:
+    """Create the app-level AI SDK for Ollama text cleanup."""
+    if settings.llm_provider != LLMProvider.OLLAMA:
+        return None
+
+    return AISDK(
+        provider="ollama",
+        model=settings.llm_model,
+        base_url=settings.ollama_base_url,
     )
+
+
+def create_text_cleanup_provider(llm: LLMService) -> TextCleanupProvider:
+    """Factory for creating text cleanup providers."""
+    return TextCleanup(llm)
 
 
 def create_ocr_provider_from_settings(settings: Settings) -> OCRProvider:
@@ -184,6 +190,8 @@ def create_ocr_provider_from_settings(settings: Settings) -> OCRProvider:
                 "Google Vision credentials required. Set GOOGLE_VISION_API_KEY or "
                 "GOOGLE_APPLICATION_CREDENTIALS."
             )
+        if credentials_file:
+            api_key = None
         return create_ocr_provider(
             "google_vision",
             api_key=api_key,
@@ -195,34 +203,24 @@ def create_ocr_provider_from_settings(settings: Settings) -> OCRProvider:
 
 def create_embedding_provider_from_settings(settings: Settings) -> EmbeddingProvider:
     """Create an embedding provider from application settings."""
-    kwargs: dict[str, object] = {
-        "model": settings.embedding_model,
-        "dimension": settings.embedding_dimension,
-        "base_url": settings.ollama_base_url,
-    }
-    if settings.embedding_provider.value == "openai":
-        if settings.openai_api_key is None:
-            raise ValueError("OpenAI API key required. Set OPENAI_API_KEY.")
-        kwargs["api_key"] = settings.openai_api_key.get_secret_value()
-
-    return create_embedding_provider(settings.embedding_provider.value, **kwargs)
+    return create_embedding_provider(
+        settings.embedding_provider.value,
+        model=settings.embedding_model,
+        dimension=settings.embedding_dimension,
+        base_url=settings.ollama_base_url,
+    )
 
 
 def create_text_cleanup_provider_from_settings(
     settings: Settings,
+    ai_sdk: AISDK | None,
+    *,
+    enabled: bool | None = None,
 ) -> TextCleanupProvider | None:
-    """Create a text cleanup provider when enabled in settings."""
-    if not settings.llm_cleanup_enabled:
+    """Create a text cleanup provider when enabled and AI SDK is available."""
+    if enabled is None:
+        enabled = settings.llm_cleanup_enabled
+    if not enabled or ai_sdk is None:
         return None
 
-    provider = settings.llm_provider.value
-    kwargs: dict[str, str | None] = {"model": settings.llm_model}
-
-    if provider == "ollama":
-        kwargs["base_url"] = settings.ollama_base_url
-    elif provider == "openai":
-        if settings.openai_api_key is None:
-            raise ValueError("OpenAI API key required for LLM cleanup. Set OPENAI_API_KEY.")
-        kwargs["api_key"] = settings.openai_api_key.get_secret_value()
-
-    return create_text_cleanup_provider(provider, **kwargs)
+    return create_text_cleanup_provider(ai_sdk)

@@ -55,6 +55,9 @@ htmlcov/
 # DBOS
 dbos_system_db/
 
+# Local dev uploads
+data/uploads/
+
 # OS
 .DS_Store
 Thumbs.db

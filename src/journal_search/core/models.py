@@ -87,3 +87,13 @@ class TextCleanupResult(BaseModel):
         default=None,
         description="OCR model that produced the input text",
     )
+
+
+class SearchResult(BaseModel):
+    """A semantic search hit."""
+
+    entry_id: UUID
+    chunk_text: str
+    similarity: float
+    journal_date: date | None = None
+    tags: list[str] = Field(default_factory=list)

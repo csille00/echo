@@ -1,34 +1,35 @@
-version: "3.8"
-
 services:
-  # Journal Search API
   api:
     build: .
     ports:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/journal_search
-      - DBOS_DATABASE_HOST=db
-      - DBOS_DATABASE_PORT=5432
-      - DBOS_DATABASE_USER=postgres
-      - DBOS_DATABASE_PASSWORD=postgres
-      - DBOS_DATABASE_NAME=journal_search
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_KEY=${SUPABASE_KEY}
-      - SUPABASE_STORAGE_BUCKET=journal-pages
-      - OCR_PROVIDER=tesseract
+      - STORAGE_BACKEND=${STORAGE_BACKEND:-local}
+      - AUTH_BACKEND=${AUTH_BACKEND:-dev_header}
+      - REALTIME_BACKEND=${REALTIME_BACKEND:-none}
+      - LOCAL_STORAGE_PATH=/app/data/uploads
+      - OCR_PROVIDER=${OCR_PROVIDER:-google_vision}
+      - GOOGLE_VISION_API_KEY=${GOOGLE_VISION_API_KEY:-}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-}
       - EMBEDDING_PROVIDER=ollama
       - EMBEDDING_MODEL=nomic-embed-text
       - OLLAMA_BASE_URL=http://ollama:11434
+      - LLM_PROVIDER=ollama
+      - LLM_MODEL=llama3.2
+      - LLM_CLEANUP_ENABLED=${LLM_CLEANUP_ENABLED:-false}
       - DEBUG=true
       - ALLOWED_ORIGINS=["http://localhost:3000"]
+    volumes:
+      - uploads_data:/app/data/uploads
+      # Mount Vision service account when using google_vision OCR:
+      # - ${GOOGLE_APPLICATION_CREDENTIALS}:/secrets/vision.json:ro
     depends_on:
       db:
         condition: service_healthy
       ollama:
         condition: service_started
 
-  # Local Postgres (for development without Supabase)
   db:
     image: pgvector/pgvector:pg16
     environment:
@@ -46,22 +47,22 @@ services:
       timeout: 5s
       retries: 5
 
-  # Ollama for local embeddings
   ollama:
     image: ollama/ollama:latest
     ports:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
-    # Pull the embedding model on startup
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
         /bin/ollama serve &
         sleep 5
         /bin/ollama pull nomic-embed-text
+        /bin/ollama pull llama3.2
         wait
 
 volumes:
   postgres_data:
   ollama_data:
+  uploads_data:

@@ -1,4 +1,4 @@
-"""Run Google Vision OCR on a test scan, with optional LLM cleanup."""
+"""Run OCR on a test scan, with optional LLM cleanup driven by .env settings."""
 
 import argparse
 import asyncio
@@ -7,13 +7,18 @@ import traceback
 from io import BytesIO
 from pathlib import Path
 
+import httpx
+from dotenv import load_dotenv
 from pdf2image import convert_from_path
 
 from journal_search.config import get_settings
 from journal_search.dependencies import (
-    create_ocr_provider,
-    create_text_cleanup_provider,
+    create_ai_sdk_from_settings,
+    create_ocr_provider_from_settings,
+    create_text_cleanup_provider_from_settings,
 )
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def load_image(path: Path) -> list[tuple[str, bytes]]:
@@ -29,13 +34,23 @@ def load_image(path: Path) -> list[tuple[str, bytes]]:
     return [(path.name, path.read_bytes())]
 
 
-async def main() -> None:
-    from dotenv import load_dotenv
+def resolve_cleanup_enabled(args: argparse.Namespace, settings_enabled: bool) -> bool:
+    """CLI flags override LLM_CLEANUP_ENABLED from .env."""
+    if args.no_cleanup:
+        return False
+    if args.cleanup:
+        return True
+    return settings_enabled
 
-    load_dotenv()
+
+async def main() -> None:
+    load_dotenv(PROJECT_ROOT / ".env")
 
     settings = get_settings()
-    parser = argparse.ArgumentParser(description="Run Google Vision OCR on a test scan")
+
+    parser = argparse.ArgumentParser(
+        description="Run OCR on a test scan using OCR_PROVIDER and LLM settings from .env",
+    )
     parser.add_argument(
         "image",
         nargs="?",
@@ -51,20 +66,20 @@ async def main() -> None:
     parser.add_argument(
         "--cleanup",
         action="store_true",
-        help="Run LLM cleanup on OCR output",
+        help="Force LLM cleanup on (overrides LLM_CLEANUP_ENABLED)",
     )
     parser.add_argument(
-        "--llm-provider",
-        default=settings.llm_provider.value,
-        choices=["ollama", "openai"],
-        help="LLM provider for cleanup",
-    )
-    parser.add_argument(
-        "--llm-model",
-        default=settings.llm_model,
-        help="LLM model for cleanup",
+        "--no-cleanup",
+        action="store_true",
+        help="Force LLM cleanup off (overrides LLM_CLEANUP_ENABLED)",
     )
     args = parser.parse_args()
+
+    if args.cleanup and args.no_cleanup:
+        print("Use only one of --cleanup or --no-cleanup")
+        sys.exit(1)
+
+    cleanup_enabled = resolve_cleanup_enabled(args, settings.llm_cleanup_enabled)
 
     if args.image:
         scan_path = Path(args.image)
@@ -73,7 +88,7 @@ async def main() -> None:
             sys.exit(1)
         scans = [scan_path]
     else:
-        test_data = Path("test-data")
+        test_data = PROJECT_ROOT / "test-data"
         scans = [
             p
             for p in sorted(test_data.iterdir())
@@ -82,20 +97,25 @@ async def main() -> None:
         ][:1]
 
         if not scans:
-            print("No image files found in test-data/")
+            print(f"No image files found in {test_data}")
             sys.exit(1)
 
     cleanup = None
-    if args.cleanup:
-        cleanup_kwargs: dict[str, str | None] = {"model": args.llm_model}
-        if args.llm_provider == "ollama":
-            cleanup_kwargs["base_url"] = settings.ollama_base_url
-        elif args.llm_provider == "openai":
-            if settings.openai_api_key is None:
-                print("OPENAI_API_KEY is required for OpenAI cleanup")
-                sys.exit(1)
-            cleanup_kwargs["api_key"] = settings.openai_api_key.get_secret_value()
-        cleanup = create_text_cleanup_provider(args.llm_provider, **cleanup_kwargs)
+    ai_sdk = create_ai_sdk_from_settings(settings)
+    if cleanup_enabled:
+        cleanup = create_text_cleanup_provider_from_settings(
+            settings,
+            ai_sdk,
+            enabled=True,
+        )
+        if cleanup is None:
+            print(
+                "LLM cleanup is enabled but could not be configured. "
+                "Check LLM_PROVIDER and API keys."
+            )
+            sys.exit(1)
+
+    engine = create_ocr_provider_from_settings(settings)
 
     def emit(text: str = "") -> None:
         print(text)
@@ -103,20 +123,12 @@ async def main() -> None:
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("w", encoding="utf-8") as out:
-        emit(f"Running Google Vision on: {scans[0].name}")
-        if args.cleanup:
-            emit(f"LLM cleanup: {args.llm_provider}:{args.llm_model}")
-
-        api_key = (
-            settings.google_vision_api_key.get_secret_value()
-            if settings.google_vision_api_key is not None
-            else None
-        )
-        engine = create_ocr_provider(
-            "google_vision",
-            api_key=api_key,
-            credentials_file=settings.google_vision_credentials_file,
-        )
+        emit(f"OCR provider: {settings.ocr_provider.value}")
+        emit(f"Running on: {scans[0].name}")
+        if cleanup:
+            emit(f"LLM cleanup: {settings.llm_provider.value}:{settings.llm_model}")
+        else:
+            emit("LLM cleanup: disabled")
 
         try:
             for scan_path in scans:
@@ -136,10 +148,17 @@ async def main() -> None:
 
                         if cleanup:
                             emit("\n--- CLEANED ---")
-                            cleaned = await cleanup.cleanup(result.text, source_model=result.model)
-                            emit(f"Model: {cleaned.model}")
-                            emit(f"Text:\n{cleaned.text}")
-                    except (RuntimeError, ValueError, OSError) as e:
+                            try:
+                                cleaned = await cleanup.cleanup(
+                                    result.text,
+                                    source_model=result.model,
+                                )
+                                emit(f"Model: {cleaned.model}")
+                                emit(f"Text:\n{cleaned.text}")
+                            except Exception as e:
+                                emit(f"Cleanup error: {e}")
+                                emit(traceback.format_exc())
+                    except (RuntimeError, ValueError, OSError, httpx.HTTPError) as e:
                         emit(f"Error: {e}")
                         emit(traceback.format_exc())
                     sys.stdout.flush()

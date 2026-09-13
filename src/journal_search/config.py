@@ -1,4 +1,8 @@
-"""Application configuration with Pydantic Settings."""
+"""Application configuration.
+
+Self-hosted by default: PostgreSQL, local filesystem storage, Ollama embeddings/LLM,
+and self-hosted DBOS. Google Cloud Vision is the only external cloud service (OCR).
+"""
 
 import os
 from enum import StrEnum
@@ -15,13 +19,26 @@ class OCRProvider(StrEnum):
 
 
 class EmbeddingProvider(StrEnum):
-    OPENAI = "openai"
     OLLAMA = "ollama"
 
 
 class LLMProvider(StrEnum):
-    OPENAI = "openai"
     OLLAMA = "ollama"
+
+
+class StorageBackend(StrEnum):
+    LOCAL = "local"
+    SUPABASE = "supabase"
+
+
+class AuthBackend(StrEnum):
+    DEV_HEADER = "dev_header"
+    SUPABASE = "supabase"
+
+
+class RealtimeBackend(StrEnum):
+    NONE = "none"
+    SUPABASE = "supabase"
 
 
 class Settings(BaseSettings):
@@ -31,44 +48,72 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # Database
-    database_url: PostgresDsn = Field(description="PostgreSQL connection string (Supabase)")
+    # Database (self-hosted PostgreSQL)
+    database_url: PostgresDsn = Field(description="PostgreSQL connection string")
 
-    # Supabase
-    supabase_url: str = Field(description="Supabase project URL")
-    supabase_key: SecretStr = Field(description="Supabase service role key")
+    @property
+    def dbos_database_url(self) -> str:
+        """Sync PostgreSQL URL for DBOS (strips the asyncpg driver)."""
+        return str(self.database_url).replace("postgresql+asyncpg://", "postgresql://")
+
+    # Object storage (swap independently via STORAGE_BACKEND)
+    storage_backend: StorageBackend = Field(
+        default=StorageBackend.LOCAL,
+        description="Object storage backend: local or supabase",
+    )
+    local_storage_path: str = Field(
+        default="data/uploads",
+        description="Directory for uploaded journal images when STORAGE_BACKEND=local",
+    )
+
+    # Auth (swap independently via AUTH_BACKEND)
+    auth_backend: AuthBackend = Field(
+        default=AuthBackend.DEV_HEADER,
+        description="Authentication backend: dev_header or supabase",
+    )
+
+    # Realtime (swap independently via REALTIME_BACKEND)
+    realtime_backend: RealtimeBackend = Field(
+        default=RealtimeBackend.NONE,
+        description="Realtime backend: none or supabase",
+    )
+
+    # Supabase (only read by adapters/supabase/*)
+    supabase_url: str = Field(default="", description="Supabase API URL")
+    supabase_service_key: SecretStr = Field(
+        default=SecretStr(""),
+        description="Supabase service role key",
+    )
     supabase_storage_bucket: str = Field(
         default="journal-pages",
-        description="Storage bucket for journal images",
+        description="Supabase Storage bucket for journal images",
     )
 
-    # OCR Configuration
+    # OCR — google_vision is the only external cloud service
     ocr_provider: OCRProvider = Field(
-        default=OCRProvider.TESSERACT,
-        description="Which OCR provider to use",
+        default=OCRProvider.GOOGLE_VISION,
+        description="OCR provider (google_vision uses Google Cloud; tesseract/surya are on-prem)",
     )
 
-    # Embedding Configuration
+    # Embeddings (self-hosted Ollama)
     embedding_provider: EmbeddingProvider = Field(
         default=EmbeddingProvider.OLLAMA,
-        description="Which embedding provider to use",
+        description="Embedding provider",
     )
     embedding_model: str = Field(
         default="nomic-embed-text",
-        description="Model name for embeddings",
+        description="Ollama model name for embeddings",
     )
     embedding_dimension: int = Field(
         default=768,
-        description="Embedding vector dimension",
+        description="Embedding vector dimension (768 for nomic-embed-text)",
+    )
+    ollama_base_url: str = Field(
+        default="http://localhost:11434",
+        description="Ollama server URL",
     )
 
-    # OpenAI (optional)
-    openai_api_key: SecretStr | None = Field(
-        default=None,
-        description="OpenAI API key for embeddings",
-    )
-
-    # Google Cloud Vision (optional)
+    # Google Cloud Vision (external — only cloud dependency)
     google_vision_api_key: SecretStr | None = Field(
         default=None,
         description="Google Cloud Vision API key for OCR",
@@ -84,24 +129,28 @@ class Settings(BaseSettings):
             self.google_vision_credentials_file = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
         return self
 
-    # Ollama (optional)
-    ollama_base_url: str = Field(
-        default="http://localhost:11434",
-        description="Ollama server URL",
-    )
-
-    # LLM text cleanup (optional)
+    # LLM text cleanup (self-hosted Ollama)
     llm_provider: LLMProvider = Field(
         default=LLMProvider.OLLAMA,
-        description="Which LLM provider to use for OCR text cleanup",
+        description="LLM provider for OCR text cleanup",
     )
     llm_model: str = Field(
         default="llama3.2",
-        description="Model name for OCR text cleanup",
+        description="Ollama model for OCR text cleanup",
     )
     llm_cleanup_enabled: bool = Field(
         default=False,
         description="Run LLM cleanup on OCR output in the processing pipeline",
+    )
+
+    # Self-hosted DBOS Conductor (optional — omit to run without the ops UI)
+    dbos_conductor_url: str | None = Field(
+        default=None,
+        description="WebSocket URL for self-hosted DBOS Conductor (e.g. ws://localhost:8090/)",
+    )
+    dbos_conductor_key: SecretStr | None = Field(
+        default=None,
+        description="API key for self-hosted DBOS Conductor",
     )
 
     # App settings

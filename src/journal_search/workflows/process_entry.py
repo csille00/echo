@@ -4,11 +4,13 @@ from uuid import UUID
 
 from dbos import DBOS
 
-from journal_search.core.models import EntryMetadata, ProcessingStatus
+from journal_search.adapters.db.repository import EntryRepository
+from journal_search.core.models import ProcessingStatus
+from journal_search.db.session import get_session
 from journal_search.dependencies import (
     get_embedder,
     get_ocr,
-    get_repository,
+    get_realtime,
     get_storage,
     get_text_cleanup,
 )
@@ -16,59 +18,50 @@ from journal_search.dependencies import (
 
 @DBOS.workflow()
 async def process_journal_entry(
-    image_data: bytes,
+    entry_id: UUID,
     user_id: UUID,
+    image_data: bytes,
     filename: str,
     content_type: str,
-    metadata: dict,  # Serialized EntryMetadata
 ) -> str:
     """
     Process a journal entry through the full pipeline.
 
     Steps:
     1. Upload image to storage
-    2. Create entry record
+    2. Update entry storage path
     3. Extract text via OCR
-    4. Generate embeddings
-    5. Store embeddings
+    4. Optional LLM cleanup
+    5. Generate and store embeddings
+    6. Mark complete
 
     Each step is checkpointed by DBOS for durability.
     """
-    entry_metadata = EntryMetadata(**metadata)
-
-    # Step 1: Upload to storage
     storage_path = await upload_image_step(user_id, image_data, filename, content_type)
+    await update_storage_path_step(entry_id, storage_path)
 
-    # Step 2: Create entry record
-    entry_id = await create_entry_step(user_id, storage_path, entry_metadata)
-
-    # Step 3: OCR extraction
     try:
         extracted_text, ocr_model = await ocr_extract_step(entry_id, image_data)
     except Exception as e:
-        await mark_failed_step(entry_id, str(e))
+        await mark_failed_step(entry_id, user_id, str(e))
         raise
 
-    # Step 3b: Optional LLM cleanup
     cleanup = get_text_cleanup()
     if cleanup is not None:
         try:
             extracted_text = await text_cleanup_step(extracted_text, ocr_model)
             await update_entry_text_step(entry_id, extracted_text)
         except Exception as e:
-            await mark_failed_step(entry_id, str(e))
+            await mark_failed_step(entry_id, user_id, str(e))
             raise
 
-    # Step 4 & 5: Embed and store
     try:
         await embed_and_store_step(entry_id, user_id, extracted_text)
     except Exception as e:
-        await mark_failed_step(entry_id, str(e))
+        await mark_failed_step(entry_id, user_id, str(e))
         raise
 
-    # Mark complete
-    await mark_complete_step(entry_id)
-
+    await mark_complete_step(entry_id, user_id)
     return str(entry_id)
 
 
@@ -85,31 +78,27 @@ async def upload_image_step(
 
 
 @DBOS.step()
-async def create_entry_step(
-    user_id: UUID,
-    storage_path: str,
-    metadata: EntryMetadata,
-) -> UUID:
-    """Create entry record - checkpointed."""
-    repo = get_repository()
-    entry = await repo.create_entry(user_id, storage_path, metadata)
-    return entry.id
+async def update_storage_path_step(entry_id: UUID, storage_path: str) -> None:
+    """Persist the storage path after upload."""
+    async with get_session() as session:
+        repo = EntryRepository(session)
+        await repo.update_storage_path(entry_id, storage_path)
 
 
 @DBOS.step()
 async def ocr_extract_step(entry_id: UUID, image_data: bytes) -> tuple[str, str]:
     """Extract text via OCR - checkpointed and retryable."""
     ocr = get_ocr()
-    repo = get_repository()
-
     result = await ocr.extract(image_data)
 
-    await repo.update_entry_ocr(
-        entry_id=entry_id,
-        extracted_text=result.text,
-        ocr_model=result.model,
-        ocr_confidence=result.confidence,
-    )
+    async with get_session() as session:
+        repo = EntryRepository(session)
+        await repo.update_entry_ocr(
+            entry_id=entry_id,
+            extracted_text=result.text,
+            ocr_model=result.model,
+            ocr_confidence=result.confidence,
+        )
 
     return result.text, result.model
 
@@ -128,25 +117,26 @@ async def text_cleanup_step(raw_text: str, source_model: str) -> str:
 @DBOS.step()
 async def update_entry_text_step(entry_id: UUID, extracted_text: str) -> None:
     """Persist cleaned text after LLM post-processing."""
-    repo = get_repository()
-    await repo.update_extracted_text(entry_id, extracted_text)
+    async with get_session() as session:
+        repo = EntryRepository(session)
+        await repo.update_extracted_text(entry_id, extracted_text)
 
 
 @DBOS.step()
 async def embed_and_store_step(entry_id: UUID, user_id: UUID, text: str) -> None:
     """Generate and store embeddings - checkpointed."""
     embedder = get_embedder()
-    repo = get_repository()
-
-    # For now, embed the whole text as one chunk
-    # TODO: Implement chunking for long entries
     chunks = [text] if text.strip() else []
 
-    if chunks:
-        results = await embedder.embed_batch(chunks)
-        embeddings = [r.embedding for r in results]
-        model = results[0].model if results else embedder.name
+    if not chunks:
+        return
 
+    results = await embedder.embed_batch(chunks)
+    embeddings = [r.embedding for r in results]
+    model = results[0].model if results else embedder.name
+
+    async with get_session() as session:
+        repo = EntryRepository(session)
         await repo.store_embeddings(
             entry_id=entry_id,
             user_id=user_id,
@@ -157,14 +147,20 @@ async def embed_and_store_step(entry_id: UUID, user_id: UUID, text: str) -> None
 
 
 @DBOS.step()
-async def mark_failed_step(entry_id: UUID, error_message: str) -> None:
+async def mark_failed_step(entry_id: UUID, user_id: UUID, error_message: str) -> None:
     """Mark entry as failed - checkpointed."""
-    repo = get_repository()
-    await repo.update_entry_status(entry_id, ProcessingStatus.FAILED, error_message)
+    async with get_session() as session:
+        repo = EntryRepository(session)
+        await repo.update_entry_status(entry_id, ProcessingStatus.FAILED, error_message)
+
+    await get_realtime().notify_entry_status(entry_id, user_id, ProcessingStatus.FAILED)
 
 
 @DBOS.step()
-async def mark_complete_step(entry_id: UUID) -> None:
+async def mark_complete_step(entry_id: UUID, user_id: UUID) -> None:
     """Mark entry as complete - checkpointed."""
-    repo = get_repository()
-    await repo.update_entry_status(entry_id, ProcessingStatus.COMPLETED)
+    async with get_session() as session:
+        repo = EntryRepository(session)
+        await repo.update_entry_status(entry_id, ProcessingStatus.COMPLETED)
+
+    await get_realtime().notify_entry_status(entry_id, user_id, ProcessingStatus.COMPLETED)
