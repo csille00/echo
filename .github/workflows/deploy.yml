@@ -1,0 +1,55 @@
+# Deploy journal-search API to xps-old after CI passes on main.
+#
+# Required GitHub repository secrets:
+#   TS_AUTHKEY        — Tailscale auth key (reusable, tagged for CI) so the runner
+#                       can reach hosts on your tailnet
+#   DEPLOY_HOST       — e.g. 100.70.187.21 (xps-old Tailscale IP)
+#   DEPLOY_USER       — e.g. ellisserverxpsold
+#   DEPLOY_SSH_KEY    — private key for DEPLOY_USER (ed25519 recommended)
+#
+# One-time server setup (on xps-old):
+#   git clone git@github.com:csille00/journal-search.git ~/journal-search
+#   cp ~/journal-search/.env.production.example ~/journal-search/.env
+#   # fill secrets, place Google Vision JSON, ensure docker networks exist
+#   docker compose -f docker-compose.dbos.yml up -d   # if not already running
+
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  deploy:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push'
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true
+          script: ~/journal-search/scripts/deploy.sh
