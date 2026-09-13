@@ -1,9 +1,9 @@
 # Deploy journal-search API to xps-old after CI passes on main.
 #
 # Required GitHub repository secrets:
-#   TS_AUTHKEY        — Tailscale auth key (reusable, tagged for CI) so the runner
-#                       can reach hosts on your tailnet
-#   DEPLOY_HOST       — e.g. 100.70.187.21 (xps-old Tailscale IP)
+#   TS_OAUTH_CLIENT_ID — Tailscale OAuth client (auth_keys scope, tag:ci)
+#   TS_OAUTH_SECRET
+#   DEPLOY_HOST        — e.g. ellisserver-xps-old (xps-old MagicDNS name)
 #   DEPLOY_USER       — e.g. ellisserverxpsold
 #   DEPLOY_SSH_KEY    — private key for DEPLOY_USER (ed25519 recommended)
 #
@@ -43,7 +43,9 @@ jobs:
       - name: Connect to Tailscale
         uses: tailscale/github-action@v3
         with:
-          authkey: ${{ secrets.TS_AUTHKEY }}
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
 
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.0

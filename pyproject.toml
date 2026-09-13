@@ -38,6 +38,9 @@ ocr-google-vision = [
 embeddings-ollama = [
     "ollama>=0.3.0",
 ]
+embeddings-google = [
+    "google-auth>=2.0.0",
+]
 llm-cleanup = [
     "ai[openai]>=0.4.1",
 ]

@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS embeddings (
     user_id UUID NOT NULL,
     chunk_index INTEGER NOT NULL DEFAULT 0,
     chunk_text TEXT NOT NULL,
-    embedding vector,
+    embedding vector(768),
     model TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

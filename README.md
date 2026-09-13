@@ -12,8 +12,8 @@ AI-powered journal OCR and semantic search. Designed to run **self-hosted** — 
 | Object storage | Local filesystem (or Supabase Storage) | `data/uploads` or Supabase bucket |
 | Auth | Dev header (`X-User-ID`) or Supabase JWT | `.env` `AUTH_BACKEND` |
 | Realtime | None (default) or Supabase `postgres_changes` | `.env` `REALTIME_BACKEND` |
-| Embeddings | Ollama `nomic-embed-text` | `ollama` service |
-| LLM cleanup | Ollama (optional) | `ollama` service |
+| Embeddings | Google `text-embedding-004` (default) or Ollama | Google API or `ollama` service |
+| LLM cleanup | Off by default (optional Ollama) | `ollama` service if enabled |
 | OCR | Google Vision (default) or Tesseract/Surya on-prem | See `.env` |
 
 DBOS Conductor (workflow ops UI) is optional and [self-hosted](https://docs.dbos.dev/production/hosting-conductor) — no DBOS Cloud required.

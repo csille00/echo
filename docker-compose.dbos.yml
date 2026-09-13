@@ -1,0 +1,81 @@
+# Self-hosted DBOS Conductor + Console (separate Postgres from app/Supabase).
+#
+# Prerequisites:
+#   1. Trial license: https://console.dbos.dev → export DBOS_CONDUCTOR_LICENSE_KEY
+#   2. cp .env.dbos.example .env.dbos && fill in the license key
+#
+# Usage:
+#   docker compose --env-file .env.dbos -f docker-compose.dbos.yml up -d
+#
+# Console UI: http://127.0.0.1:18080 (or via Caddy: https://conductor.ellisfam.space)
+# Conductor WS: ws://127.0.0.1:8090/  (journal-search on same host uses docker network)
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: dbos-conductor-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DBOS_PG_PASSWORD:-dbos}
+      POSTGRES_DB: dbos_conductor
+    volumes:
+      - dbos_postgres_data:/var/lib/postgresql/data
+    networks:
+      - dbos
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  conductor:
+    image: dbosdev/conductor
+    container_name: dbos-conductor
+    environment:
+      DBOS__CONDUCTOR_DB_URL: postgresql://postgres:${DBOS_PG_PASSWORD:-dbos}@postgres:5432/dbos_conductor?sslmode=disable
+      DBOS_CONDUCTOR_LICENSE_KEY: ${DBOS_CONDUCTOR_LICENSE_KEY}
+    ports:
+      # Localhost only — API connects via docker network (dbos-conductor:8090)
+      - "127.0.0.1:8090:8090"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - dbos
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  console:
+    image: dbosdev/console
+    container_name: dbos-console
+    environment:
+      DBOS_CONDUCTOR_URL: conductor:8090
+    ports:
+      # Reachable from ellis-server Caddy over Tailscale (not public internet)
+      - "${DBOS_CONSOLE_BIND:-0.0.0.0}:${DBOS_CONSOLE_PORT:-18080}:8080"
+    depends_on:
+      conductor:
+        condition: service_healthy
+    networks:
+      - dbos
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+networks:
+  dbos:
+    name: dbos-network
+    driver: bridge
+
+volumes:
+  dbos_postgres_data:

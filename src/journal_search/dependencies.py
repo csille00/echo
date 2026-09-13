@@ -3,7 +3,7 @@
 from typing import cast
 
 from journal_search.adapters.ai_sdk import AISDK
-from journal_search.adapters.embedders.ollama import OllamaEmbedder
+from journal_search.adapters.embedders.factory import create_embedding_provider as build_embedding_provider
 from journal_search.adapters.ocr.google_vision import GoogleVisionOCR
 from journal_search.adapters.ocr.surya import SuryaOCR
 from journal_search.adapters.ocr.tesseract import TesseractOCR
@@ -137,6 +137,8 @@ class Container:
             await self._ocr.close()
         if self._text_cleanup is not None and hasattr(self._text_cleanup, "close"):
             await self._text_cleanup.close()
+        if self._embedder is not None and hasattr(self._embedder, "close"):
+            await self._embedder.close()
         if self._supabase is not None:
             await self._supabase.close()
 
@@ -150,13 +152,6 @@ def create_ocr_provider(provider_name: str, **kwargs: object) -> OCRProvider:
     if provider_name == "google_vision":
         return cast(OCRProvider, GoogleVisionOCR(**kwargs))
     raise ValueError(f"Unknown OCR provider: {provider_name}")
-
-
-def create_embedding_provider(provider_name: str, **kwargs: object) -> EmbeddingProvider:
-    """Factory for creating embedding providers."""
-    if provider_name == "ollama":
-        return cast(EmbeddingProvider, OllamaEmbedder(**kwargs))
-    raise ValueError(f"Unknown embedding provider: {provider_name}")
 
 
 def create_ai_sdk_from_settings(settings: Settings) -> AISDK | None:
@@ -203,12 +198,7 @@ def create_ocr_provider_from_settings(settings: Settings) -> OCRProvider:
 
 def create_embedding_provider_from_settings(settings: Settings) -> EmbeddingProvider:
     """Create an embedding provider from application settings."""
-    return create_embedding_provider(
-        settings.embedding_provider.value,
-        model=settings.embedding_model,
-        dimension=settings.embedding_dimension,
-        base_url=settings.ollama_base_url,
-    )
+    return build_embedding_provider(settings)
 
 
 def create_text_cleanup_provider_from_settings(

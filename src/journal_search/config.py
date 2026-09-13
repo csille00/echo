@@ -1,7 +1,7 @@
 """Application configuration.
 
-Self-hosted by default: PostgreSQL, local filesystem storage, Ollama embeddings/LLM,
-and self-hosted DBOS. Google Cloud Vision is the only external cloud service (OCR).
+Self-hosted by default: PostgreSQL, local filesystem storage, and self-hosted DBOS.
+Google Cloud provides OCR and optional embeddings when local models are unavailable.
 """
 
 import os
@@ -20,6 +20,7 @@ class OCRProvider(StrEnum):
 
 class EmbeddingProvider(StrEnum):
     OLLAMA = "ollama"
+    GOOGLE = "google"
 
 
 class LLMProvider(StrEnum):
@@ -95,25 +96,33 @@ class Settings(BaseSettings):
         description="OCR provider (google_vision uses Google Cloud; tesseract/surya are on-prem)",
     )
 
-    # Embeddings (self-hosted Ollama)
+    # Embeddings (Ollama on-prem or Google Cloud API)
     embedding_provider: EmbeddingProvider = Field(
-        default=EmbeddingProvider.OLLAMA,
-        description="Embedding provider",
+        default=EmbeddingProvider.GOOGLE,
+        description="Embedding provider: google or ollama",
     )
     embedding_model: str = Field(
-        default="nomic-embed-text",
-        description="Ollama model name for embeddings",
+        default="text-embedding-004",
+        description="Embedding model (text-embedding-004 or nomic-embed-text)",
     )
     embedding_dimension: int = Field(
         default=768,
-        description="Embedding vector dimension (768 for nomic-embed-text)",
+        description="Embedding vector dimension (768 for text-embedding-004 / nomic-embed-text)",
     )
     ollama_base_url: str = Field(
         default="http://localhost:11434",
-        description="Ollama server URL",
+        description="Ollama server URL when EMBEDDING_PROVIDER=ollama",
+    )
+    google_embedding_api_key: SecretStr | None = Field(
+        default=None,
+        description="Google API key for embeddings; falls back to GOOGLE_VISION_API_KEY",
+    )
+    google_embedding_credentials_file: str | None = Field(
+        default=None,
+        description="Service account JSON for embeddings; falls back to Vision credentials",
     )
 
-    # Google Cloud Vision (external — only cloud dependency)
+    # Google Cloud Vision (external)
     google_vision_api_key: SecretStr | None = Field(
         default=None,
         description="Google Cloud Vision API key for OCR",
@@ -127,6 +136,10 @@ class Settings(BaseSettings):
     def resolve_google_credentials(self) -> "Settings":
         if self.google_vision_credentials_file is None:
             self.google_vision_credentials_file = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+        if self.google_embedding_credentials_file is None:
+            self.google_embedding_credentials_file = self.google_vision_credentials_file
+        if self.google_embedding_api_key is None:
+            self.google_embedding_api_key = self.google_vision_api_key
         return self
 
     # LLM text cleanup (self-hosted Ollama)
