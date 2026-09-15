@@ -1,5 +1,1 @@
-"""Vercel AI SDK adapter."""
-
-from journal_search.adapters.ai_sdk.client import AISDK
-
-__all__ = ["AISDK"]
+"""Vercel AI SDK adapter (optional llm-cleanup extra)."""

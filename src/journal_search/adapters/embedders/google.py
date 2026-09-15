@@ -68,7 +68,7 @@ class GoogleEmbedder:
 
     async def _embed_text(self, text: str) -> list[float]:
         url = (
-            f"https://generativelanguage.googleapis.com/v1beta/models/"
+            "https://generativelanguage.googleapis.com/v1beta/models/"
             f"{self._model}:embedContent"
         )
         params: dict[str, str] = {}
