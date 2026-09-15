@@ -17,7 +17,9 @@ class AISDK:
         api_key: str | None = None,
     ) -> None:
         if provider != "ollama":
-            raise ValueError(f"Only ollama is supported for self-hosted LLM cleanup, got: {provider}")
+            raise ValueError(
+                f"Only ollama is supported for self-hosted LLM cleanup, got: {provider}"
+            )
         if not base_url:
             raise ValueError("Ollama base URL required")
 

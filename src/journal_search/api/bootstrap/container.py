@@ -1,13 +1,17 @@
 """Application container bootstrap."""
 
+from journal_search.adapters.ai_sdk.factory import create_ai_sdk_from_settings
 from journal_search.adapters.auth.factory import create_auth_provider
 from journal_search.adapters.realtime.factory import create_realtime_provider
 from journal_search.adapters.storage.factory import create_storage_provider
-from journal_search.adapters.supabase.client import SupabaseClient, create_supabase_client, supabase_required
+from journal_search.adapters.supabase.client import (
+    SupabaseClient,
+    create_supabase_client,
+    supabase_required,
+)
 from journal_search.config import Settings
 from journal_search.dependencies import (
     Container,
-    create_ai_sdk_from_settings,
     create_embedding_provider_from_settings,
     create_ocr_provider_from_settings,
     create_text_cleanup_provider_from_settings,

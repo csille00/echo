@@ -2,14 +2,15 @@
 
 from typing import cast
 
-from journal_search.adapters.ai_sdk import AISDK
-from journal_search.adapters.embedders.factory import create_embedding_provider as build_embedding_provider
+from journal_search.adapters.embedders.factory import (
+    create_embedding_provider as build_embedding_provider,
+)
 from journal_search.adapters.ocr.google_vision import GoogleVisionOCR
 from journal_search.adapters.ocr.surya import SuryaOCR
 from journal_search.adapters.ocr.tesseract import TesseractOCR
-from journal_search.adapters.text_cleanup.cleanup import TextCleanup
-from journal_search.config import LLMProvider, Settings
 from journal_search.adapters.supabase.client import SupabaseClient
+from journal_search.adapters.text_cleanup.cleanup import TextCleanup
+from journal_search.config import Settings
 from journal_search.ports.auth import AuthProvider
 from journal_search.ports.embedder import EmbeddingProvider
 from journal_search.ports.llm import LLMService
@@ -74,7 +75,7 @@ class Container:
         storage: StorageProvider | None = None,
         auth: AuthProvider | None = None,
         realtime: RealtimeProvider | None = None,
-        ai_sdk: AISDK | None = None,
+        ai_sdk: LLMService | None = None,
         text_cleanup: TextCleanupProvider | None = None,
         supabase: SupabaseClient | None = None,
     ) -> None:
@@ -118,7 +119,7 @@ class Container:
         return self._realtime
 
     @property
-    def ai_sdk(self) -> AISDK:
+    def ai_sdk(self) -> LLMService:
         if self._ai_sdk is None:
             raise RuntimeError("AI SDK not configured")
         return self._ai_sdk
@@ -152,18 +153,6 @@ def create_ocr_provider(provider_name: str, **kwargs: object) -> OCRProvider:
     if provider_name == "google_vision":
         return cast(OCRProvider, GoogleVisionOCR(**kwargs))
     raise ValueError(f"Unknown OCR provider: {provider_name}")
-
-
-def create_ai_sdk_from_settings(settings: Settings) -> AISDK | None:
-    """Create the app-level AI SDK for Ollama text cleanup."""
-    if settings.llm_provider != LLMProvider.OLLAMA:
-        return None
-
-    return AISDK(
-        provider="ollama",
-        model=settings.llm_model,
-        base_url=settings.ollama_base_url,
-    )
 
 
 def create_text_cleanup_provider(llm: LLMService) -> TextCleanupProvider:
@@ -203,7 +192,7 @@ def create_embedding_provider_from_settings(settings: Settings) -> EmbeddingProv
 
 def create_text_cleanup_provider_from_settings(
     settings: Settings,
-    ai_sdk: AISDK | None,
+    ai_sdk: LLMService | None,
     *,
     enabled: bool | None = None,
 ) -> TextCleanupProvider | None:
