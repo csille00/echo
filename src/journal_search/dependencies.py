@@ -6,7 +6,6 @@ from journal_search.adapters.embedders.factory import (
     create_embedding_provider as build_embedding_provider,
 )
 from journal_search.adapters.ocr.google_vision import GoogleVisionOCR
-from journal_search.adapters.ocr.surya import SuryaOCR
 from journal_search.adapters.ocr.tesseract import TesseractOCR
 from journal_search.adapters.supabase.client import SupabaseClient
 from journal_search.adapters.text_cleanup.cleanup import TextCleanup
@@ -149,6 +148,8 @@ def create_ocr_provider(provider_name: str, **kwargs: object) -> OCRProvider:
     if provider_name == "tesseract":
         return cast(OCRProvider, TesseractOCR(**kwargs))
     if provider_name == "surya":
+        from journal_search.adapters.ocr.surya import SuryaOCR
+
         return cast(OCRProvider, SuryaOCR(**kwargs))
     if provider_name == "google_vision":
         return cast(OCRProvider, GoogleVisionOCR(**kwargs))
