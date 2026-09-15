@@ -15,4 +15,5 @@ tests/
 scripts/*-output.txt
 scripts/ocr-output.txt
 *.md
+!README.md
 uv.lock

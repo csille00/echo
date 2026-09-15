@@ -6,8 +6,9 @@ WORKDIR /app
 # Install uv for fast dependency management
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Copy dependency files
-COPY pyproject.toml .
+# Copy package metadata (hatchling requires README.md at build time)
+COPY pyproject.toml README.md .
+COPY src/ src/
 
 # Install dependencies
 RUN uv pip install --system --no-cache -e ".[ocr-google-vision,embeddings-google]"
