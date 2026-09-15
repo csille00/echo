@@ -11,7 +11,7 @@ COPY pyproject.toml README.md .
 COPY src/ src/
 
 # Install dependencies
-RUN uv pip install --system --no-cache -e ".[ocr-google-vision,embeddings-google]"
+RUN uv pip install --system --no-cache -e ".[ocr-google-vision,embeddings-google,llm-cleanup]"
 
 # Runtime stage
 FROM python:3.12-slim
