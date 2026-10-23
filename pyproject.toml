@@ -5,7 +5,7 @@ description = "AI-powered journal search and OCR processing"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "dbos>=0.26.0",
+    "dbos[enterprise]>=0.26.0",
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.30.0",
     "pydantic>=2.9.0",
