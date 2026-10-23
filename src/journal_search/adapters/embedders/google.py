@@ -67,10 +67,7 @@ class GoogleEmbedder:
         return list(await asyncio.gather(*(self.embed(text) for text in texts)))
 
     async def _embed_text(self, text: str) -> list[float]:
-        url = (
-            "https://generativelanguage.googleapis.com/v1beta/models/"
-            f"{self._model}:embedContent"
-        )
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self._model}:embedContent"
         params: dict[str, str] = {}
         headers: dict[str, str] = {"Content-Type": "application/json"}
         if self._api_key:
