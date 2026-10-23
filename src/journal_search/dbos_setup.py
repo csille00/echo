@@ -10,7 +10,7 @@ def build_dbos_config(settings: Settings) -> DBOSConfig:
     """Build a DBOS config from application settings."""
     config: DBOSConfig = {
         "name": "journal_search",
-        "database_url": settings.dbos_database_url,
+        "system_database_url": settings.dbos_database_url,
         "runtimeConfig": {"start": ["journal_search.workflows"]},
     }
 
