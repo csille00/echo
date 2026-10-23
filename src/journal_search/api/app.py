@@ -21,7 +21,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
 
-    init_dbos(settings, fastapi=app)
+    init_dbos(settings)
     configure_middleware(app, settings)
     register_routes(app)
 

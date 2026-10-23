@@ -2,7 +2,6 @@
 
 from dbos import DBOS
 from dbos._dbos_config import DBOSConfig
-from fastapi import FastAPI
 
 from journal_search.config import Settings
 
@@ -23,6 +22,6 @@ def build_dbos_config(settings: Settings) -> DBOSConfig:
     return config
 
 
-def init_dbos(settings: Settings, fastapi: FastAPI | None = None) -> DBOS:
-    """Initialize the DBOS singleton (call once before launch)."""
-    return DBOS(config=build_dbos_config(settings), fastapi=fastapi)
+def init_dbos(settings: Settings) -> DBOS:
+    """Initialize the DBOS singleton (call DBOS.launch() from app lifespan)."""
+    return DBOS(config=build_dbos_config(settings))
