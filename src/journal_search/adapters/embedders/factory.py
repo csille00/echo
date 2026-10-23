@@ -32,8 +32,9 @@ def create_embedding_provider(settings: Settings) -> EmbeddingPort:
                 "Google embedding credentials required. Set GOOGLE_EMBEDDING_API_KEY, "
                 "GOOGLE_EMBEDDING_CREDENTIALS_FILE, or reuse Vision credentials."
             )
-        if credentials_file:
-            api_key = None
+        # Prefer an explicit API key (AI Studio) over the Vision service account file.
+        if api_key:
+            credentials_file = None
         return cast(
             EmbeddingPort,
             GoogleEmbedder(

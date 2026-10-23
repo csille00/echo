@@ -102,8 +102,8 @@ class Settings(BaseSettings):
         description="Embedding provider: google or ollama",
     )
     embedding_model: str = Field(
-        default="text-embedding-004",
-        description="Embedding model (text-embedding-004 or nomic-embed-text)",
+        default="gemini-embedding-001",
+        description="Embedding model (gemini-embedding-001 or nomic-embed-text for Ollama)",
     )
     embedding_dimension: int = Field(
         default=768,

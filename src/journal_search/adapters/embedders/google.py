@@ -19,7 +19,7 @@ class GoogleEmbedder:
 
     def __init__(
         self,
-        model: str = "text-embedding-004",
+        model: str = "gemini-embedding-001",
         dimension: int = 768,
         api_key: str | None = None,
         credentials_file: str | None = None,
@@ -75,14 +75,18 @@ class GoogleEmbedder:
         else:
             headers["Authorization"] = f"Bearer {await self._get_access_token()}"
 
+        body: dict[str, object] = {
+            "model": f"models/{self._model}",
+            "content": {"parts": [{"text": text}]},
+        }
+        if self._dimension != 3072:
+            body["outputDimensionality"] = self._dimension
+
         response = await self._client.post(
             url,
             params=params,
             headers=headers,
-            json={
-                "model": f"models/{self._model}",
-                "content": {"parts": [{"text": text}]},
-            },
+            json=body,
         )
         response.raise_for_status()
         data = response.json()
