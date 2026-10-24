@@ -263,7 +263,12 @@ class EntryRepository:
         if entry is None:
             return None
 
-        new_date = None if clear_journal_date else (journal_date if journal_date is not None else entry.journal_date)
+        if clear_journal_date:
+            new_date = None
+        elif journal_date is not None:
+            new_date = journal_date
+        else:
+            new_date = entry.journal_date
         new_text = extracted_text if extracted_text is not None else entry.extracted_text
         new_tags = tags if tags is not None else entry.tags
         new_notes = notes if notes is not None else entry.notes
