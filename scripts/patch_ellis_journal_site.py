@@ -12,11 +12,11 @@ CONFIG = REPO / "hosts" / "ellis-server" / "configuration.nix"
 
 old_journal = (
     '    journal    = { expose = "tailnet"; target = "http://192.168.1.54:8000"; '
-    'protect = true; };  # Journal Search API on xps-old\n'
+    "protect = true; };  # Journal Search API on xps-old\n"
 )
 new_journal = (
     '    journal    = { expose = "tailnet"; target = "http://localhost:8094"; '
-    'protect = true; };  # Journal Search UI + /api proxy (modules/journal.nix)\n'
+    "protect = true; };  # Journal Search UI + /api proxy (modules/journal.nix)\n"
 )
 
 import_line = "    ../../modules/journal.nix\n"
