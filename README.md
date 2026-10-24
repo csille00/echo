@@ -28,7 +28,7 @@ docker compose up
 
 API: `http://localhost:8000` — upload via `POST /api/v1/entries/upload` with header `X-User-ID: <uuid>` (when `AUTH_BACKEND=dev_header`).
 
-Web UI (`web/`): production at **https://journal.ellisfam.space** (static site on ellis-server, `/api` proxied to xps-old). CI builds on every PR; **Deploy Web** rsyncs after `main` passes CI. See `deploy/nixos/README.md` and `web/README.md`.
+A React UI lives in `web/` for local development (see `web/README.md`). Production hosting is not wired in this repo.
 
 ## Layering
 
