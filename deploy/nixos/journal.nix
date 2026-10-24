@@ -7,7 +7,8 @@
 let
   siteRoot = "/var/www/journal";
   port = 8094;
-  apiUpstream = "http://100.70.187.21:8000";
+  # LAN IP on xps-old (Tailscale IP is not reachable from ellis-server's subnet route).
+  apiUpstream = "http://192.168.1.54:8000";
 in
 {
   services.caddy.virtualHosts.":${toString port}" = {
