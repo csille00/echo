@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Browse — Journal mockup</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="sidebar-brand">Journal</div>
+        <a class="nav-item" href="calendar.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          Calendar
+        </a>
+        <a class="nav-item active" href="browse.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Browse
+        </a>
+        <a class="nav-item" href="ask.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 0 1-1.1 4.2 8.5 8.5 0 0 1-7.4 4.3 8.4 8.4 0 0 1-4.2-1.1L3 21l1.1-5.3"/></svg>
+          Ask
+        </a>
+        <div class="sidebar-footer">
+          Mock data only
+          <button type="button" class="theme-toggle" data-theme-toggle>Dark appearance</button>
+        </div>
+      </aside>
+
+      <div class="main">
+        <header class="toolbar">
+          <h1 class="large-title" style="margin:0">Browse</h1>
+          <div class="toolbar-actions">
+            <a class="btn btn-primary" href="review.html">Scan</a>
+          </div>
+        </header>
+
+        <div class="content">
+          <input class="search-field" type="search" placeholder="Search your journals" aria-label="Search" />
+          <p class="footnote" style="margin-top:-12px;margin-bottom:16px">Semantic search will live here — mock is visual only.</p>
+
+          <div class="group">
+            <p class="group-label">2026</p>
+            <div class="photo-grid">
+              <a class="photo-cell" href="entry.html"><div class="photo-cell-inner"></div></a>
+              <a class="photo-cell" href="entry.html"><div class="photo-cell-inner"></div></a>
+              <a class="photo-cell" href="entry.html"><div class="photo-cell-inner"></div></a>
+              <a class="photo-cell" href="entry.html"><div class="photo-cell-inner"></div></a>
+              <a class="photo-cell" href="entry.html"><div class="photo-cell-inner"></div></a>
+              <a class="photo-cell" href="entry.html"><div class="photo-cell-inner"></div></a>
+              <a class="photo-cell" href="entry.html"><div class="photo-cell-inner"></div></a>
+              <a class="photo-cell" href="entry.html"><div class="photo-cell-inner"></div></a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="tab-bar">
+      <a class="tab-item" href="calendar.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        Calendar
+      </a>
+      <a class="tab-item active" href="browse.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Browse
+      </a>
+      <a class="tab-item" href="ask.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 0 1-1.1 4.2 8.5 8.5 0 0 1-7.4 4.3 8.4 8.4 0 0 1-4.2-1.1L3 21l1.1-5.3"/></svg>
+        Ask
+      </a>
+    </nav>
+    <script src="shared.js"></script>
+  </body>
+</html>

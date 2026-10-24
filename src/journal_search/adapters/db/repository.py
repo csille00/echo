@@ -1,6 +1,6 @@
 """Database repository for journal entries and embeddings."""
 
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import text
@@ -246,6 +246,50 @@ class EntryRepository:
             {"entry_id": entry_id},
         )
         await self._session.commit()
+
+    async def update_entry_fields(
+        self,
+        entry_id: UUID,
+        user_id: UUID,
+        *,
+        journal_date: date | None = None,
+        extracted_text: str | None = None,
+        tags: list[str] | None = None,
+        notes: str | None = None,
+        clear_journal_date: bool = False,
+    ) -> JournalEntry | None:
+        """Update user-editable fields on an entry."""
+        entry = await self.get_entry(entry_id, user_id)
+        if entry is None:
+            return None
+
+        new_date = None if clear_journal_date else (journal_date if journal_date is not None else entry.journal_date)
+        new_text = extracted_text if extracted_text is not None else entry.extracted_text
+        new_tags = tags if tags is not None else entry.tags
+        new_notes = notes if notes is not None else entry.notes
+
+        await self._session.execute(
+            text("""
+                UPDATE entries
+                SET journal_date = :journal_date,
+                    extracted_text = :extracted_text,
+                    tags = :tags,
+                    notes = :notes,
+                    updated_at = :updated_at
+                WHERE id = :id AND user_id = :user_id
+            """),
+            {
+                "id": entry_id,
+                "user_id": user_id,
+                "journal_date": new_date,
+                "extracted_text": new_text,
+                "tags": new_tags,
+                "notes": new_notes,
+                "updated_at": datetime.utcnow(),
+            },
+        )
+        await self._session.commit()
+        return await self.get_entry(entry_id, user_id)
 
     async def list_entries(
         self,

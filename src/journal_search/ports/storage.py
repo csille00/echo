@@ -52,6 +52,10 @@ class StorageProvider(Protocol):
         """
         ...
 
+    async def get_signed_url(self, storage_path: str, expires_in: int = 3600) -> str:
+        """Return a time-limited URL when the backend supports signing."""
+        ...
+
     async def delete(self, storage_path: str) -> None:
         """
         Delete a file from storage.

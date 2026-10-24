@@ -10,7 +10,7 @@ AI-powered journal OCR and semantic search. Designed to run **self-hosted** — 
 | Database | PostgreSQL + pgvector | `db` service or your Postgres |
 | Workflow durability | DBOS (system DB auto-created) | Same Postgres |
 | Object storage | Local filesystem (or Supabase Storage) | `data/uploads` or Supabase bucket |
-| Auth | Dev header (`X-User-ID`) or Supabase JWT | `.env` `AUTH_BACKEND` |
+| Auth | Dev header, Authentik SSO, or Supabase JWT | `.env` `AUTH_BACKEND` |
 | Realtime | None (default) or Supabase `postgres_changes` | `.env` `REALTIME_BACKEND` |
 | Embeddings | Google `text-embedding-004` (default) or Ollama | Google API or `ollama` service |
 | LLM cleanup | Off by default (optional Ollama) | `ollama` service if enabled |
@@ -28,6 +28,8 @@ docker compose up
 
 API: `http://localhost:8000` — upload via `POST /api/v1/entries/upload` with header `X-User-ID: <uuid>` (when `AUTH_BACKEND=dev_header`).
 
+Web UI (`web/`): production at **https://journal.ellisfam.space** (static site on ellis-server, `/api` proxied to xps-old). CI builds on every PR; **Deploy Web** rsyncs after `main` passes CI. See `deploy/nixos/README.md` and `web/README.md`.
+
 ## Layering
 
 Third-party integrations live behind **ports** (`src/journal_search/ports/`) with **adapters** per vendor. Swap backends via `.env` without touching API or workflow code:
@@ -36,7 +38,7 @@ Third-party integrations live behind **ports** (`src/journal_search/ports/`) wit
 |---------|------|----------|
 | Database | SQLAlchemy + repository | Plain PostgreSQL (Supabase Postgres = same `DATABASE_URL`) |
 | Storage | `StorageProvider` | `local`, `supabase` |
-| Auth | `AuthProvider` | `dev_header`, `supabase` |
+| Auth | `AuthProvider` | `dev_header`, `authentik`, `supabase` |
 | Realtime | `RealtimeProvider` | `none`, `supabase` |
 | OCR / embeddings / LLM | respective ports | Google Vision, Ollama, etc. |
 

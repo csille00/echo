@@ -1,0 +1,66 @@
+# Deploy the Vite SPA to ellis-server (/var/www/journal) after CI passes on main.
+#
+# Secrets (same Tailscale OAuth client as blog/datenight):
+#   TS_OAUTH_CLIENT_ID
+#   TS_OAUTH_CLIENT_SECRET  (or TS_OAUTH_SECRET)
+#
+# One-time on ellis-server: see deploy/nixos/README.md (Caddy :8094 + hostnames).
+
+name: Deploy Web
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-web-production
+  cancel-in-progress: false
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  deploy:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push'
+      )
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install and build
+        run: |
+          npm ci
+          npm run build
+        env:
+          VITE_AUTH_MODE: authentik
+          VITE_API_URL: ""
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_CLIENT_SECRET || secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Rsync to ellis-server
+        run: |
+          rsync -avz --delete \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            dist/ ellisserver@100.67.73.62:/var/www/journal/

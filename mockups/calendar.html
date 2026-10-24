@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Calendar — Journal mockup</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="sidebar-brand">Journal</div>
+        <a class="nav-item active" href="calendar.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          Calendar
+        </a>
+        <a class="nav-item" href="browse.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Browse
+        </a>
+        <a class="nav-item" href="ask.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 0 1-1.1 4.2 8.5 8.5 0 0 1-7.4 4.3 8.4 8.4 0 0 1-4.2-1.1L3 21l1.1-5.3"/></svg>
+          Ask
+        </a>
+        <div class="sidebar-footer">
+          Mock data only
+          <button type="button" class="theme-toggle" data-theme-toggle>Dark appearance</button>
+        </div>
+      </aside>
+
+      <div class="main">
+        <header class="toolbar">
+          <h1 class="large-title" style="margin:0">October 2026</h1>
+          <div class="toolbar-actions">
+            <a class="btn btn-primary" href="review.html">Scan</a>
+          </div>
+        </header>
+
+        <div class="content">
+          <div class="cal-header">
+            <span class="cal-month">October 2026</span>
+            <div class="cal-nav">
+              <button type="button" aria-label="Previous month">‹</button>
+              <button type="button" aria-label="Next month">›</button>
+            </div>
+          </div>
+
+          <div class="cal-grid" aria-hidden="true">
+            <span class="cal-dow">S</span><span class="cal-dow">M</span><span class="cal-dow">T</span><span class="cal-dow">W</span><span class="cal-dow">T</span><span class="cal-dow">F</span><span class="cal-dow">S</span>
+            <span class="cal-day muted">27</span><span class="cal-day muted">28</span><span class="cal-day muted">29</span><span class="cal-day muted">30</span><span class="cal-day">1</span><span class="cal-day">2</span><span class="cal-day">3</span>
+            <span class="cal-day">4</span><span class="cal-day">5</span><span class="cal-day">6</span><span class="cal-day">7</span><span class="cal-day">8</span><span class="cal-day">9</span><span class="cal-day">10</span>
+            <span class="cal-day">11</span><span class="cal-day">12</span><span class="cal-day">13</span><span class="cal-day">14</span><span class="cal-day">15</span><span class="cal-day">16</span><span class="cal-day">17</span>
+            <span class="cal-day">18</span><span class="cal-day">19</span><span class="cal-day">20</span><span class="cal-day has-entry">21</span><span class="cal-day has-entry selected">22</span><span class="cal-day">23</span><span class="cal-day">24</span>
+            <span class="cal-day">25</span><span class="cal-day">26</span><span class="cal-day">27</span><span class="cal-day">28</span><span class="cal-day">29</span><span class="cal-day">30</span><span class="cal-day">31</span>
+          </div>
+
+          <div class="group">
+            <p class="group-label">Thursday, October 22</p>
+            <div class="inset">
+              <a class="row" href="entry.html">
+                <div class="row-thumb"></div>
+                <div class="row-body">
+                  <p class="row-title">Morning pages</p>
+                  <p class="row-sub">Today we walked along the creek…</p>
+                </div>
+                <span class="row-chevron">›</span>
+              </a>
+              <a class="row" href="entry.html">
+                <div class="row-thumb"></div>
+                <div class="row-body">
+                  <p class="row-title">IMG_2038</p>
+                  <p class="row-sub status-processing">Processing handwriting…</p>
+                </div>
+                <span class="row-chevron">›</span>
+              </a>
+            </div>
+          </div>
+
+          <p class="footnote">Tap a day with a dot to see entries. Years scrubber can live in the nav later.</p>
+        </div>
+      </div>
+    </div>
+
+    <nav class="tab-bar">
+      <a class="tab-item active" href="calendar.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        Calendar
+      </a>
+      <a class="tab-item" href="browse.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Browse
+      </a>
+      <a class="tab-item" href="ask.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 0 1-1.1 4.2 8.5 8.5 0 0 1-7.4 4.3 8.4 8.4 0 0 1-4.2-1.1L3 21l1.1-5.3"/></svg>
+        Ask
+      </a>
+    </nav>
+    <script src="shared.js"></script>
+  </body>
+</html>

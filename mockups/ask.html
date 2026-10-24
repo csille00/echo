@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Ask — Journal mockup</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="sidebar-brand">Journal</div>
+        <a class="nav-item" href="calendar.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          Calendar
+        </a>
+        <a class="nav-item" href="browse.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Browse
+        </a>
+        <a class="nav-item active" href="ask.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 0 1-1.1 4.2 8.5 8.5 0 0 1-7.4 4.3 8.4 8.4 0 0 1-4.2-1.1L3 21l1.1-5.3"/></svg>
+          Ask
+        </a>
+        <div class="sidebar-footer">
+          <button type="button" class="theme-toggle" data-theme-toggle>Dark appearance</button>
+        </div>
+      </aside>
+
+      <div class="main">
+        <header class="toolbar">
+          <h1 class="large-title" style="margin:0">Ask</h1>
+        </header>
+
+        <div class="content">
+          <div class="chat-thread">
+            <div class="bubble-user">When did we talk about planting tomatoes?</div>
+            <div class="bubble-assistant">
+              You wrote about that once, on a walk by the creek.
+              <a class="citation-card" href="entry.html">
+                <div class="citation-meta">Oct 22, 2026 · Morning pages</div>
+                <div class="citation-quote">“…walked along the creek and talked about planting tomatoes in the side bed…”</div>
+              </a>
+            </div>
+            <div class="bubble-user">What was I going to do this weekend?</div>
+            <div class="bubble-assistant">
+              You wanted to call your mom.
+              <a class="citation-card" href="entry.html">
+                <div class="citation-meta">Oct 22, 2026 · Morning pages</div>
+                <div class="citation-quote">“I want to remember to call Mom this weekend.”</div>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="chat-composer">
+          <div class="chat-composer-inner">
+            <input type="text" placeholder="Ask about your journals" aria-label="Message" />
+            <button type="button" aria-label="Send">↑</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="tab-bar">
+      <a class="tab-item" href="calendar.html">Calendar</a>
+      <a class="tab-item" href="browse.html">Browse</a>
+      <a class="tab-item active" href="ask.html">Ask</a>
+    </nav>
+    <script src="shared.js"></script>
+  </body>
+</html>

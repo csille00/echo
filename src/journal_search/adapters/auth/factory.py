@@ -1,5 +1,6 @@
 """Auth adapter factory."""
 
+from journal_search.adapters.auth.authentik import AuthentikAuth
 from journal_search.adapters.auth.dev_header import DevHeaderAuth
 from journal_search.adapters.supabase.auth import SupabaseAuth
 from journal_search.adapters.supabase.client import SupabaseClient
@@ -19,5 +20,8 @@ def create_auth_provider(
         if supabase is None:
             raise ValueError("Supabase client required for AUTH_BACKEND=supabase")
         return SupabaseAuth(supabase)
+
+    if settings.auth_backend == AuthBackend.AUTHENTIK:
+        return AuthentikAuth(settings)
 
     raise ValueError(f"Unknown auth backend: {settings.auth_backend}")

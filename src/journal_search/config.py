@@ -35,6 +35,7 @@ class StorageBackend(StrEnum):
 class AuthBackend(StrEnum):
     DEV_HEADER = "dev_header"
     SUPABASE = "supabase"
+    AUTHENTIK = "authentik"
 
 
 class RealtimeBackend(StrEnum):
@@ -70,7 +71,29 @@ class Settings(BaseSettings):
     # Auth (swap independently via AUTH_BACKEND)
     auth_backend: AuthBackend = Field(
         default=AuthBackend.DEV_HEADER,
-        description="Authentication backend: dev_header or supabase",
+        description="Authentication backend: dev_header, supabase, or authentik",
+    )
+
+    # Authentik (AUTH_BACKEND=authentik)
+    authentik_forward_auth: bool = Field(
+        default=True,
+        description="Trust Authentik proxy user header (e.g. X-Authentik-Uid) from Caddy",
+    )
+    authentik_uid_header: str = Field(
+        default="X-Authentik-Uid",
+        description="Header set by Authentik forward-auth outpost",
+    )
+    oidc_jwks_url: str = Field(
+        default="",
+        description="JWKS URL for validating Bearer tokens (Authentik OAuth2/OIDC provider)",
+    )
+    oidc_issuer: str = Field(
+        default="",
+        description="Optional expected JWT iss claim",
+    )
+    oidc_audience: str = Field(
+        default="",
+        description="Optional expected JWT aud claim (OAuth client id)",
     )
 
     # Realtime (swap independently via REALTIME_BACKEND)
@@ -169,7 +192,7 @@ class Settings(BaseSettings):
     # App settings
     debug: bool = Field(default=False)
     allowed_origins: list[str] = Field(
-        default=["http://localhost:3000"],
+        default=["http://localhost:3000", "http://localhost:5173"],
         description="CORS allowed origins",
     )
 

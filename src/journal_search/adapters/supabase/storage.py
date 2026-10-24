@@ -37,5 +37,15 @@ class SupabaseStorage:
     async def get_public_url(self, storage_path: str) -> str:
         return self._client.storage.from_(self._bucket).get_public_url(storage_path)
 
+    async def get_signed_url(self, storage_path: str, expires_in: int = 3600) -> str:
+        signed = await self._client.storage.from_(self._bucket).create_signed_url(
+            storage_path,
+            expires_in,
+        )
+        url = signed.get("signedURL") or signed.get("signedUrl")
+        if not url:
+            raise ValueError("Could not create signed URL")
+        return url
+
     async def delete(self, storage_path: str) -> None:
         await self._client.storage.from_(self._bucket).remove([storage_path])
