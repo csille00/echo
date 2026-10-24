@@ -15,31 +15,7 @@ export function LoginPage() {
   }
 
   if (authMode === "authentik") {
-    return (
-      <div className="login-screen">
-        <div className="login-card">
-          <h1 className="large-title">Journal</h1>
-          <p className="footnote">
-            Sign in with Authentik at your journal hostname (e.g.{" "}
-            <strong>journal.ellisfam.space</strong>). The browser session cookie is used for API
-            requests; there is no separate app password.
-          </p>
-          <button
-            className="btn btn-primary"
-            type="button"
-            onClick={() => {
-              window.location.reload();
-            }}
-          >
-            Continue with SSO
-          </button>
-          <p className="caption" style={{ marginTop: 16 }}>
-            If you keep seeing this screen, open the app through the Authentik-protected URL or ask
-            your admin to add the UI hostname to the same forward-auth application as the API.
-          </p>
-        </div>
-      </div>
-    );
+    return <Navigate to="/" replace />;
   }
 
   if (authMode === "dev") {

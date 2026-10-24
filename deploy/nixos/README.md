@@ -10,4 +10,8 @@ Static site deploy matches [nixos-config `docs/deploying-a-static-site.md`](http
    ```
 4. `sudo nixos-rebuild switch --flake .#ellis-server`
 
+**Important:** Caddy only picks up `journal.nix` changes after rebuild. If `/api/*` returns 502, check
+`curl http://127.0.0.1:8094/api/health` on ellis-server — the live config must proxy to
+`192.168.1.54:8000`, not `100.70.187.21:8000`.
+
 GitHub Actions (this repo) rsyncs `web/dist/` to `/var/www/journal/` on push to `main` after CI passes.

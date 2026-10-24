@@ -9,9 +9,13 @@ import { LoginPage } from "./pages/LoginPage";
 import { ReviewPage } from "./pages/ReviewPage";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { authenticated, loading } = useAuth();
+  const { authenticated, loading, authMode } = useAuth();
   if (loading) {
     return <p className="footnote" style={{ padding: 24 }}>Loading…</p>;
+  }
+  // Authentik forward-auth at Caddy already gates the hostname; no in-app login.
+  if (authMode === "authentik") {
+    return children;
   }
   if (!authenticated) {
     return <Navigate to="/login" replace />;

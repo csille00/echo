@@ -16,6 +16,8 @@ type AuthContextValue = {
   /** True when the API accepts requests for this user. */
   authenticated: boolean;
   userId: string | null;
+  /** False when /api/v1/auth/whoami failed (Authentik mode). */
+  apiReachable: boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -30,14 +32,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const authMode = getAuthMode();
   const [session, setSession] = useState<Session | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [apiReachable, setApiReachable] = useState(true);
   const [loading, setLoading] = useState(true);
 
   const refreshAuthentik = useCallback(async () => {
     try {
       const me = await fetchWhoami(null);
       setUserId(me.user_id);
+      setApiReachable(true);
     } catch {
       setUserId(null);
+      setApiReachable(false);
     }
   }, []);
 
@@ -98,19 +103,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [authMode]);
 
   const authenticated =
-    authMode === "authentik" ? userId !== null : authMode === "dev" ? Boolean(userId) : Boolean(session);
+    authMode === "authentik"
+      ? true
+      : authMode === "dev"
+        ? Boolean(userId)
+        : Boolean(session);
 
   const value = useMemo(
     () => ({
       authenticated,
       userId,
+      apiReachable: authMode === "authentik" ? apiReachable : true,
       loading,
       signIn,
       signOut,
       accessToken: authMode === "supabase" ? (session?.access_token ?? null) : null,
       authMode,
     }),
-    [authenticated, userId, loading, signIn, signOut, session, authMode],
+    [authenticated, userId, apiReachable, loading, signIn, signOut, session, authMode],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
