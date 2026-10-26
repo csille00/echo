@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  dev run services    Start API (uvicorn) and web UI (Vite) for local work
+
+Environment (optional):
+  API_PORT            API listen port (default: 8000)
+  AUTH_BACKEND        API auth mode (default: dev_header for run services)
+EOF
+}
+
+run_services() {
+  if [[ ! -d "$ROOT/web/node_modules" ]]; then
+    echo "web/node_modules missing — run: cd web && npm install" >&2
+    exit 1
+  fi
+
+  trap 'trap - INT TERM; kill $(jobs -p) 2>/dev/null || true' INT TERM EXIT
+
+  cd "$ROOT"
+  export AUTH_BACKEND="${AUTH_BACKEND:-dev_header}"
+  echo "→ API  http://127.0.0.1:${API_PORT:-8000} (AUTH_BACKEND=$AUTH_BACKEND)"
+  uv run uvicorn journal_search.api.app:app --reload --host 127.0.0.1 --port "${API_PORT:-8000}" &
+
+  cd "$ROOT/web"
+  echo "→ UI   Vite (see log for URL; /api proxied to API)"
+  npm run dev &
+
+  wait
+}
+
+case "${1:-}" in
+  run)
+    case "${2:-}" in
+      services) run_services ;;
+      *)
+        usage >&2
+        exit 1
+        ;;
+    esac
+    ;;
+  -h | --help | help)
+    usage
+    ;;
+  "")
+    usage
+    exit 1
+    ;;
+  *)
+    usage >&2
+    exit 1
+    ;;
+esac
