@@ -2,7 +2,6 @@
 
 from typing import cast
 
-from journal_search.adapters.embedders.google import GoogleEmbedder
 from journal_search.adapters.embedders.ollama import OllamaEmbedder
 from journal_search.config import EmbeddingProvider, Settings
 from journal_search.ports.embedder import EmbeddingProvider as EmbeddingPort
@@ -21,6 +20,8 @@ def create_embedding_provider(settings: Settings) -> EmbeddingPort:
         )
 
     if settings.embedding_provider == EmbeddingProvider.GOOGLE:
+        from journal_search.adapters.embedders.google import GoogleEmbedder
+
         api_key = (
             settings.google_embedding_api_key.get_secret_value()
             if settings.google_embedding_api_key is not None

@@ -33,6 +33,7 @@ class StorageBackend(StrEnum):
 
 
 class AuthBackend(StrEnum):
+    LOCAL = "local"
     DEV_HEADER = "dev_header"
     SUPABASE = "supabase"
     AUTHENTIK = "authentik"
@@ -70,31 +71,74 @@ class Settings(BaseSettings):
 
     # Auth (swap independently via AUTH_BACKEND)
     auth_backend: AuthBackend = Field(
-        default=AuthBackend.DEV_HEADER,
-        description="Authentication backend: dev_header, supabase, or authentik",
+        default=AuthBackend.LOCAL,
+        description=(
+            "Authentication backend: local, dev_header, supabase, or authentik proxy-header mode"
+        ),
+    )
+    session_ttl_days: int = Field(
+        default=30,
+        ge=1,
+        description="Lifetime of a local-account session cookie",
+    )
+    session_cookie_secure: bool = Field(
+        default=False,
+        description="Set the session cookie Secure flag (enable behind HTTPS)",
     )
 
-    # Authentik (AUTH_BACKEND=authentik)
+    # Reverse-proxy header auth (AUTH_BACKEND=authentik). Optional.
+    # The header default matches Authentik forward-auth; point it at whatever
+    # your proxy sends. This is separate from the OIDC login below.
     authentik_forward_auth: bool = Field(
         default=True,
-        description="Trust Authentik proxy user header (e.g. X-Authentik-Uid) from Caddy",
+        description="Trust a user-id header injected by the reverse proxy",
     )
     authentik_uid_header: str = Field(
         default="X-Authentik-Uid",
-        description="Header set by Authentik forward-auth outpost",
+        description="Proxy header that carries the user UUID",
+    )
+
+    # Generic OpenID Connect login. Set issuer, client id, and client secret
+    # to add a "Sign in with SSO" button for any OIDC provider.
+    oidc_issuer: str = Field(
+        default="",
+        description="OIDC issuer URL. Discovery is fetched from this URL.",
+    )
+    oidc_client_id: str = Field(default="", description="OIDC client id")
+    oidc_client_secret: SecretStr = Field(
+        default=SecretStr(""),
+        description="OIDC client secret",
+    )
+    oidc_scopes: str = Field(default="openid profile email")
+    oidc_display_name: str = Field(
+        default="SSO",
+        description="Label for the SSO button",
+    )
+    oidc_auto_register: bool = Field(
+        default=True,
+        description="Create an account on first SSO sign-in. The first account is the admin.",
+    )
+    public_url: str = Field(
+        default="",
+        description="Public origin, used to build the OIDC redirect URL behind a proxy",
     )
     oidc_jwks_url: str = Field(
         default="",
-        description="JWKS URL for validating Bearer tokens (Authentik OAuth2/OIDC provider)",
-    )
-    oidc_issuer: str = Field(
-        default="",
-        description="Optional expected JWT iss claim",
+        description="Optional JWKS URL override. Discovery supplies this when empty.",
     )
     oidc_audience: str = Field(
         default="",
-        description="Optional expected JWT aud claim (OAuth client id)",
+        description="Optional expected JWT aud. Defaults to the OIDC client id.",
     )
+
+    @property
+    def oidc_enabled(self) -> bool:
+        """True when a generic OIDC login button should be offered."""
+        return bool(
+            self.oidc_issuer.strip()
+            and self.oidc_client_id.strip()
+            and self.oidc_client_secret.get_secret_value().strip()
+        )
 
     # Realtime (swap independently via REALTIME_BACKEND)
     realtime_backend: RealtimeBackend = Field(
@@ -115,18 +159,18 @@ class Settings(BaseSettings):
 
     # OCR — google_vision is the only external cloud service
     ocr_provider: OCRProvider = Field(
-        default=OCRProvider.GOOGLE_VISION,
-        description="OCR provider (google_vision uses Google Cloud; tesseract/surya are on-prem)",
+        default=OCRProvider.TESSERACT,
+        description="OCR provider (tesseract/surya are on-prem; google_vision uses Google Cloud)",
     )
 
     # Embeddings (Ollama on-prem or Google Cloud API)
     embedding_provider: EmbeddingProvider = Field(
-        default=EmbeddingProvider.GOOGLE,
-        description="Embedding provider: google or ollama",
+        default=EmbeddingProvider.OLLAMA,
+        description="Embedding provider: ollama or google",
     )
     embedding_model: str = Field(
-        default="gemini-embedding-001",
-        description="Embedding model (gemini-embedding-001 or nomic-embed-text for Ollama)",
+        default="nomic-embed-text",
+        description="Embedding model (nomic-embed-text for Ollama, or a Google model)",
     )
     embedding_dimension: int = Field(
         default=768,
@@ -190,6 +234,15 @@ class Settings(BaseSettings):
     )
 
     # App settings
+    api_host: str = Field(
+        default="127.0.0.1",
+        description="Address the API binds to. Use 0.0.0.0 inside a container.",
+    )
+    listen_port: int = Field(default=8000, ge=1, le=65535)
+    web_root: str = Field(
+        default="",
+        description="Directory of the built web UI. Empty disables static serving.",
+    )
     debug: bool = Field(default=False)
     allowed_origins: list[str] = Field(
         default=["http://localhost:3000", "http://localhost:5173"],

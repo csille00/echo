@@ -1,5 +1,5 @@
 import type { JournalEntry, SearchHit } from "../types";
-import { getAuthMode } from "./authMode";
+import { getAuthMode, usesCookieSession } from "./authMode";
 
 const base = () => import.meta.env.VITE_API_URL?.replace(/\/$/, "") ?? "";
 
@@ -15,7 +15,8 @@ export class ApiError extends Error {
 function authHeaders(accessToken: string | null): Record<string, string> {
   const mode = getAuthMode();
   if (mode === "dev") {
-    const userId = import.meta.env.VITE_DEV_USER_ID;
+    const userId =
+      sessionStorage.getItem("journal-dev-user-id") || import.meta.env.VITE_DEV_USER_ID;
     if (userId) return { "X-User-ID": userId };
     return {};
   }
@@ -38,7 +39,7 @@ async function apiFetch<T>(
   }
   const res = await fetch(`${base()}${path}`, {
     ...init,
-    credentials: getAuthMode() === "authentik" ? "include" : "same-origin",
+    credentials: usesCookieSession() ? "include" : "same-origin",
     headers: { ...headers, ...(init?.headers as Record<string, string>) },
   });
   if (!res.ok) {
@@ -54,8 +55,48 @@ async function apiFetch<T>(
   return res.json() as Promise<T>;
 }
 
+export type AuthConfig = {
+  auth_backend: string;
+  needs_setup: boolean;
+  oidc_enabled?: boolean;
+  oidc_display_name?: string;
+};
+
+export function oidcStartUrl(): string {
+  const root = import.meta.env.VITE_API_URL?.replace(/\/$/, "") ?? "";
+  return `${root}/api/v1/auth/oidc/start`;
+}
+
+export async function fetchAuthConfig(): Promise<AuthConfig> {
+  const res = await fetch(`${base()}/api/v1/auth/config`, { credentials: "include" });
+  if (!res.ok) throw new ApiError("Auth config unavailable", res.status);
+  return res.json() as Promise<AuthConfig>;
+}
+
 export async function fetchWhoami(accessToken: string | null): Promise<{ user_id: string }> {
   return apiFetch("/api/v1/auth/whoami", accessToken);
+}
+
+export async function login(email: string, password: string): Promise<void> {
+  await apiFetch("/api/v1/auth/login", null, {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export async function registerAccount(body: {
+  email: string;
+  name: string;
+  password: string;
+}): Promise<void> {
+  await apiFetch("/api/v1/auth/register", null, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function logout(): Promise<void> {
+  await apiFetch("/api/v1/auth/logout", null, { method: "POST" });
 }
 
 export async function listEntries(accessToken: string | null): Promise<JournalEntry[]> {
@@ -117,7 +158,7 @@ export async function fetchEntryImageBlob(
   entryId: string,
 ): Promise<Blob> {
   const res = await fetch(`${base()}/api/v1/entries/${entryId}/image`, {
-    credentials: getAuthMode() === "authentik" ? "include" : "same-origin",
+    credentials: usesCookieSession() ? "include" : "same-origin",
     headers: authHeaders(accessToken),
   });
   if (!res.ok) throw new ApiError("Image unavailable", res.status);

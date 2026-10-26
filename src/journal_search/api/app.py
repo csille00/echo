@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from journal_search.api.lifespan import lifespan
 from journal_search.api.middleware import configure_middleware
 from journal_search.api.router import register_routes
+from journal_search.api.static import register_spa
 from journal_search.config import Settings, get_settings
 from journal_search.dbos_setup import init_dbos
 
@@ -24,5 +25,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     init_dbos(settings)
     configure_middleware(app, settings)
     register_routes(app)
+    if settings.web_root:
+        register_spa(app, settings.web_root)
 
     return app

@@ -158,7 +158,12 @@ async def get_entry_image_url(
     storage = get_storage()
     try:
         url = await storage.get_signed_url(entry.storage_path, 3600)
-    except (ValueError, NotImplementedError) as exc:
+    except NotImplementedError:
+        return EntryImageUrlResponse(
+            url=f"/api/v1/entries/{entry_id}/image",
+            expires_in=None,
+        )
+    except ValueError as exc:
         raise HTTPException(status_code=501, detail=str(exc)) from exc
     return EntryImageUrlResponse(url=url, expires_in=3600)
 

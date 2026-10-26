@@ -41,16 +41,13 @@ function ThemeToggle() {
 }
 
 export function Layout() {
-  const { signOut, apiReachable, authMode } = useAuth();
+  const { signOut, apiReachable } = useAuth();
 
   return (
     <div className="app">
-      {authMode === "authentik" && !apiReachable ? (
+      {!apiReachable ? (
         <div className="api-banner" role="status">
-          Cannot reach the journal API. On ellis-server run{" "}
-          <code>sudo nixos-rebuild switch</code> after updating{" "}
-          <code>modules/journal.nix</code> (API proxy must use LAN IP{" "}
-          <code>192.168.1.54:8000</code>, not Tailscale).
+          Cannot reach the journal API.
         </div>
       ) : null}
       <aside className="sidebar">

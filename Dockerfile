@@ -1,4 +1,15 @@
-# Build stage
+# Web UI
+FROM node:24-bookworm-slim AS web
+
+WORKDIR /web
+
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+
+COPY web/ ./
+RUN npm run build
+
+# Python dependencies
 FROM python:3.12-slim AS builder
 
 WORKDIR /app
@@ -29,8 +40,12 @@ RUN apt-get update && apt-get install -y \
 COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Copy application code
+# Copy application code and the built UI
 COPY src/ src/
+COPY --from=web /web/dist /app/web/dist
+
+ENV API_HOST=0.0.0.0
+ENV WEB_ROOT=/app/web/dist
 
 # Create non-root user
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app

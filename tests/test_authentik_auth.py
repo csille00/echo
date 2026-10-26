@@ -23,6 +23,7 @@ def _request(headers: list[tuple[bytes, bytes]]) -> Request:
 async def test_forward_auth_uid_header() -> None:
     user_id = uuid4()
     settings = Settings(
+        _env_file=None,  # type: ignore[call-arg]
         database_url="postgresql+asyncpg://u:p@localhost/db",
         auth_backend="authentik",
         authentik_forward_auth=True,
@@ -37,6 +38,7 @@ async def test_missing_auth_returns_401() -> None:
     from fastapi import HTTPException
 
     settings = Settings(
+        _env_file=None,  # type: ignore[call-arg]
         database_url="postgresql+asyncpg://u:p@localhost/db",
         auth_backend="authentik",
     )

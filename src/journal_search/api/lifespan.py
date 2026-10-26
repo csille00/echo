@@ -8,6 +8,7 @@ from fastapi import FastAPI
 
 from journal_search.api.bootstrap import build_container
 from journal_search.config import get_settings
+from journal_search.db.migrate import apply_migrations
 from journal_search.db.session import close_db, init_db
 
 
@@ -16,6 +17,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Startup and shutdown for the API process."""
     settings = get_settings()
     init_db(settings)
+    await apply_migrations()
 
     container = await build_container(settings)
     container.install()

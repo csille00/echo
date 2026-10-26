@@ -1,7 +1,10 @@
 """Auth adapter factory."""
 
+from typing import assert_never
+
 from journal_search.adapters.auth.authentik import AuthentikAuth
 from journal_search.adapters.auth.dev_header import DevHeaderAuth
+from journal_search.adapters.auth.local import LocalAuth
 from journal_search.adapters.supabase.auth import SupabaseAuth
 from journal_search.adapters.supabase.client import SupabaseClient
 from journal_search.config import AuthBackend, Settings
@@ -13,15 +16,16 @@ def create_auth_provider(
     supabase: SupabaseClient | None = None,
 ) -> AuthProvider:
     """Create the configured auth adapter."""
-    if settings.auth_backend == AuthBackend.DEV_HEADER:
-        return DevHeaderAuth()
-
-    if settings.auth_backend == AuthBackend.SUPABASE:
-        if supabase is None:
-            raise ValueError("Supabase client required for AUTH_BACKEND=supabase")
-        return SupabaseAuth(supabase)
-
-    if settings.auth_backend == AuthBackend.AUTHENTIK:
-        return AuthentikAuth(settings)
-
-    raise ValueError(f"Unknown auth backend: {settings.auth_backend}")
+    match settings.auth_backend:
+        case AuthBackend.LOCAL:
+            return LocalAuth()
+        case AuthBackend.DEV_HEADER:
+            return DevHeaderAuth()
+        case AuthBackend.SUPABASE:
+            if supabase is None:
+                raise ValueError("Supabase client required for AUTH_BACKEND=supabase")
+            return SupabaseAuth(supabase)
+        case AuthBackend.AUTHENTIK:
+            return AuthentikAuth(settings)
+        case _ as unreachable:
+            assert_never(unreachable)

@@ -1,21 +1,49 @@
 import { FormEvent, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
+import { ApiError, oidcStartUrl } from "../lib/api";
 import { setDevUserId, useAuth } from "../lib/auth";
 
 export function LoginPage() {
-  const { signIn, authenticated, loading, authMode } = useAuth();
+  const {
+    signIn,
+    register,
+    authenticated,
+    loading,
+    authMode,
+    needsSetup,
+    apiReachable,
+    oidcEnabled,
+    oidcDisplayName,
+  } = useAuth();
+  const [params] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [devUserId, setDevUserIdInput] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(params.get("error"));
   const [submitting, setSubmitting] = useState(false);
 
-  if (!loading && authenticated) {
+  if (loading) {
+    return <p className="footnote" style={{ padding: 24 }}>Loading…</p>;
+  }
+
+  if (!loading && authenticated && authMode !== "authentik") {
     return <Navigate to="/" replace />;
   }
 
   if (authMode === "authentik") {
     return <Navigate to="/" replace />;
+  }
+
+  if (!apiReachable) {
+    return (
+      <div className="login-screen">
+        <div className="login-card">
+          <h1 className="large-title">Journal</h1>
+          <p className="login-error">Cannot reach the journal API.</p>
+        </div>
+      </div>
+    );
   }
 
   if (authMode === "dev") {
@@ -55,20 +83,43 @@ export function LoginPage() {
     setSubmitting(true);
     setError(null);
     try {
-      await signIn(email, password);
+      if (authMode === "local" && needsSetup) {
+        await register(email, password, name);
+      } else {
+        await signIn(email, password);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign in failed");
+      setError(err instanceof ApiError || err instanceof Error ? err.message : "Sign in failed");
     } finally {
       setSubmitting(false);
     }
   };
 
+  const setup = authMode === "local" && needsSetup;
+
   return (
     <div className="login-screen">
       <div className="login-card">
         <h1 className="large-title">Journal</h1>
-        <p className="footnote">Sign in with Supabase (legacy dev mode).</p>
+        <p className="footnote">
+          {setup
+            ? "Create the admin account. This is the only open signup."
+            : authMode === "local"
+              ? "Sign in with your email and password."
+              : "Sign in with Supabase."}
+        </p>
         <form className="login-form" onSubmit={(e) => void onSubmit(e)}>
+          {setup ? (
+            <label className="field">
+              <span className="caption">Name</span>
+              <input
+                autoComplete="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </label>
+          ) : null}
           <label className="field">
             <span className="caption">Email</span>
             <input
@@ -83,16 +134,22 @@ export function LoginPage() {
             <span className="caption">Password</span>
             <input
               type="password"
-              autoComplete="current-password"
+              autoComplete={setup ? "new-password" : "current-password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              minLength={setup ? 10 : undefined}
               required
             />
           </label>
           {error ? <p className="login-error">{error}</p> : null}
           <button className="btn btn-primary" type="submit" disabled={submitting}>
-            {submitting ? "Signing in…" : "Sign in"}
+            {submitting ? "Please wait…" : setup ? "Create account" : "Sign in"}
           </button>
+          {authMode === "local" && oidcEnabled ? (
+            <a className="btn btn-ghost" href={oidcStartUrl()}>
+              Sign in with {oidcDisplayName}
+            </a>
+          ) : null}
         </form>
       </div>
     </div>

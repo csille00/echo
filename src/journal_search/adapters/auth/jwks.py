@@ -8,7 +8,7 @@ from jwt import PyJWKClient
 
 
 class JwksValidator:
-    """Validate JWTs against a JWKS endpoint (e.g. Authentik OAuth provider)."""
+    """Validate JWTs against an OpenID Connect provider's JWKS endpoint."""
 
     def __init__(
         self,

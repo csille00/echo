@@ -7,7 +7,7 @@ from journal_search.config import LLMProvider, Settings
 
 def create_ai_sdk_from_settings(settings: Settings):
     """Create the app-level AI SDK for Ollama text cleanup."""
-    if settings.llm_provider != LLMProvider.OLLAMA:
+    if not settings.llm_cleanup_enabled or settings.llm_provider != LLMProvider.OLLAMA:
         return None
 
     from journal_search.adapters.ai_sdk.client import AISDK

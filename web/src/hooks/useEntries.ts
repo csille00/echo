@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { listEntries } from "../lib/api";
+import { getAuthMode } from "../lib/authMode";
 import type { JournalEntry } from "../types";
 
 export function useEntries(accessToken: string | null) {
@@ -8,7 +9,7 @@ export function useEntries(accessToken: string | null) {
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    if (accessToken === null && import.meta.env.VITE_AUTH_MODE === "supabase") return;
+    if (accessToken === null && getAuthMode() === "supabase") return;
     try {
       const data = await listEntries(accessToken);
       setEntries(data);

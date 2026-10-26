@@ -5,21 +5,23 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/journal_search
+      - API_HOST=0.0.0.0
+      - WEB_ROOT=/app/web/dist
       - STORAGE_BACKEND=${STORAGE_BACKEND:-local}
-      - AUTH_BACKEND=${AUTH_BACKEND:-dev_header}
+      - AUTH_BACKEND=${AUTH_BACKEND:-local}
       - REALTIME_BACKEND=${REALTIME_BACKEND:-none}
       - LOCAL_STORAGE_PATH=/app/data/uploads
-      - OCR_PROVIDER=${OCR_PROVIDER:-google_vision}
+      - OCR_PROVIDER=${OCR_PROVIDER:-tesseract}
       - GOOGLE_VISION_API_KEY=${GOOGLE_VISION_API_KEY:-}
       - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-}
-      - EMBEDDING_PROVIDER=ollama
-      - EMBEDDING_MODEL=nomic-embed-text
+      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-ollama}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-nomic-embed-text}
       - OLLAMA_BASE_URL=http://ollama:11434
       - LLM_PROVIDER=ollama
       - LLM_MODEL=llama3.2
       - LLM_CLEANUP_ENABLED=${LLM_CLEANUP_ENABLED:-false}
       - DEBUG=true
-      - ALLOWED_ORIGINS=["http://localhost:3000"]
+      - ALLOWED_ORIGINS=["http://localhost:3000","http://localhost:5173"]
     volumes:
       - uploads_data:/app/data/uploads
       # Mount Vision service account when using google_vision OCR:
@@ -40,7 +42,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./migrations:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
