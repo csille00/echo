@@ -7,8 +7,8 @@
 # Usage:
 #   docker compose --env-file .env.dbos -f docker-compose.dbos.yml up -d
 #
-# Console UI: http://127.0.0.1:18080 (or via Caddy: https://conductor.ellisfam.space)
-# Conductor WS: ws://127.0.0.1:8090/  (journal-search on same host uses docker network)
+# Console UI: http://127.0.0.1:18080
+# Conductor WS: ws://127.0.0.1:8090/  (the API on the same Docker network uses dbos-conductor:8090)
 
 services:
   postgres:
@@ -57,8 +57,8 @@ services:
     environment:
       DBOS_CONDUCTOR_URL: conductor:8090
     ports:
-      # Reachable from ellis-server Caddy over Tailscale (not public internet)
-      - "${DBOS_CONSOLE_BIND:-0.0.0.0}:${DBOS_CONSOLE_PORT:-18080}:8080"
+      # Localhost only. Set DBOS_CONSOLE_BIND=0.0.0.0 to reach it from another machine.
+      - "${DBOS_CONSOLE_BIND:-127.0.0.1}:${DBOS_CONSOLE_PORT:-18080}:8080"
     depends_on:
       conductor:
         condition: service_healthy
