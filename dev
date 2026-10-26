@@ -24,7 +24,7 @@ run_services() {
   cd "$ROOT"
   export AUTH_BACKEND="${AUTH_BACKEND:-dev_header}"
   echo "→ API  http://127.0.0.1:${API_PORT:-8000} (AUTH_BACKEND=$AUTH_BACKEND)"
-  uv run uvicorn journal_search.api.app:app --reload --host 127.0.0.1 --port "${API_PORT:-8000}" &
+  uv run uvicorn echo.api.app:app --reload --host 127.0.0.1 --port "${API_PORT:-8000}" &
 
   cd "$ROOT/web"
   echo "→ UI   Vite (see log for URL; /api proxied to API)"

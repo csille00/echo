@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 from PIL import Image as PILImage
 
-from journal_search.adapters.ocr.tesseract import TesseractOCR
+from echo.adapters.ocr.tesseract import TesseractOCR
 
 
 class TestTesseractOCR:
@@ -30,7 +30,7 @@ class TestTesseractOCR:
         img.save(buf, format="PNG")
         image_data = buf.getvalue()
 
-        with patch("journal_search.adapters.ocr.tesseract.pytesseract") as mock_pytesseract:
+        with patch("echo.adapters.ocr.tesseract.pytesseract") as mock_pytesseract:
             mock_pytesseract.image_to_data.return_value = {
                 "text": ["Hello", "World"],
                 "conf": [95, 90],

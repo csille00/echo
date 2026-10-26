@@ -5,7 +5,7 @@
 }:
 
 buildNpmPackage {
-  pname = "journal-search-web";
+  pname = "echo-web";
   version = "0.1.0";
   src = ../web;
 
@@ -21,7 +21,7 @@ buildNpmPackage {
   '';
 
   meta = {
-    description = "Journal Search web UI";
+    description = "Echo web UI";
     platforms = lib.platforms.linux;
   };
 }

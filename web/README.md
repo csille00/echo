@@ -1,6 +1,6 @@
-# Journal Search — web app
+# Echo — web app
 
-React UI for the journal-search API.
+React UI for the echo API.
 
 The UI loads `GET /api/v1/auth/config` and follows the API. With `AUTH_BACKEND=local` (the default), the first visitor creates an admin account and later visits use email and password. The session is an HTTP-only cookie.
 

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from pdf2image import convert_from_path
 
-from journal_search.adapters.ocr.tesseract import TesseractOCR
+from echo.adapters.ocr.tesseract import TesseractOCR
 
 
 async def main() -> None:

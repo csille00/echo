@@ -1,9 +1,9 @@
-# NixOS module for Journal Search.
+# NixOS module for Echo.
 #
 # The service listens on 127.0.0.1:8000. Publish it with whatever reverse
 # proxy the host already uses.
 #
-#   services.journal-search.enable = true;
+#   services.echo.enable = true;
 { self }:
 {
   config,
@@ -12,7 +12,7 @@
   ...
 }:
 let
-  cfg = config.services.journal-search;
+  cfg = config.services.echo;
   settingsEnv = lib.mapAttrs (_: envValue) cfg.settings;
   envValue =
     value:
@@ -46,19 +46,19 @@ let
     // settingsEnv;
 in
 {
-  options.services.journal-search = {
-    enable = lib.mkEnableOption "Journal Search";
+  options.services.echo = {
+    enable = lib.mkEnableOption "Echo";
 
     package = lib.mkOption {
       type = lib.types.package;
       default = self.packages.${pkgs.stdenv.hostPlatform.system}.default;
-      defaultText = lib.literalExpression "inputs.journal-search.packages.\${system}.default";
-      description = "Journal Search package. Includes the API and the built web UI.";
+      defaultText = lib.literalExpression "inputs.echo.packages.\${system}.default";
+      description = "Echo package. Includes the API and the built web UI.";
     };
 
     user = lib.mkOption {
       type = lib.types.str;
-      default = "journal_search";
+      default = "echo";
       description = ''
         System user. The local PostgreSQL role uses the same name.
         Use only letters, digits, and underscores.
@@ -67,7 +67,7 @@ in
 
     group = lib.mkOption {
       type = lib.types.str;
-      default = "journal_search";
+      default = "echo";
       description = "System group for the service and its data directory.";
     };
 
@@ -77,7 +77,7 @@ in
       example = "0.0.0.0";
       description = ''
         Address the API binds to. Leave this on localhost and point a reverse proxy at
-        {option}`services.journal-search.port`.
+        {option}`services.echo.port`.
       '';
     };
 
@@ -89,14 +89,14 @@ in
 
     dataDir = lib.mkOption {
       type = lib.types.path;
-      default = "/var/lib/journal-search";
+      default = "/var/lib/echo";
       description = "State directory. Uploaded pages are stored in `uploads` inside this directory.";
     };
 
     environmentFile = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
-      example = "/run/secrets/journal-search.env";
+      example = "/run/secrets/echo.env";
       description = ''
         Absolute path to an environment file. Use it for secrets such as `OIDC_CLIENT_SECRET`.
         The file is not copied into the Nix store. Values here override {option}`settings`.
@@ -138,7 +138,7 @@ in
 
     database.name = lib.mkOption {
       type = lib.types.str;
-      default = "journal_search";
+      default = "echo";
       description = "Database name. The service user owns it when it is created locally.";
     };
 
@@ -146,7 +146,7 @@ in
       type = lib.types.bool;
       default = true;
       description = ''
-        Enable the Ollama service and download {option}`services.journal-search.ollama.model`.
+        Enable the Ollama service and download {option}`services.echo.ollama.model`.
         Turn this off when embeddings come from another machine or another provider.
       '';
     };
@@ -168,11 +168,11 @@ in
     assertions = [
       {
         assertion = builtins.match "[A-Za-z_][A-Za-z0-9_]*" cfg.user != null;
-        message = "services.journal-search.user must contain only letters, digits, and underscores.";
+        message = "services.echo.user must contain only letters, digits, and underscores.";
       }
       {
         assertion = builtins.match "[A-Za-z_][A-Za-z0-9_]*" cfg.database.name != null;
-        message = "services.journal-search.database.name must contain only letters, digits, and underscores.";
+        message = "services.echo.database.name must contain only letters, digits, and underscores.";
       }
       {
         assertion =
@@ -180,20 +180,20 @@ in
           || cfg.settings ? DATABASE_URL
           || cfg.environmentFile != null;
         message = ''
-          journal-search needs a database. Leave database.createLocally enabled, set settings.DATABASE_URL,
+          echo needs a database. Leave database.createLocally enabled, set settings.DATABASE_URL,
           or provide DATABASE_URL in environmentFile.
         '';
       }
     ];
 
-    users.users = lib.mkIf (cfg.user == "journal_search") {
+    users.users = lib.mkIf (cfg.user == "echo") {
       ${cfg.user} = {
         isSystemUser = true;
         group = cfg.group;
         home = cfg.dataDir;
       };
     };
-    users.groups = lib.mkIf (cfg.group == "journal_search") {
+    users.groups = lib.mkIf (cfg.group == "echo") {
       ${cfg.group} = { };
     };
 
@@ -218,8 +218,8 @@ in
       '';
     };
 
-    systemd.services.journal-search-init-db = lib.mkIf cfg.database.createLocally {
-      description = "Create the pgvector extension for Journal Search";
+    systemd.services.echo-init-db = lib.mkIf cfg.database.createLocally {
+      description = "Create the pgvector extension for Echo";
       after = [ "postgresql-setup.service" ];
       requires = [ "postgresql-setup.service" ];
       serviceConfig = {
@@ -239,16 +239,16 @@ in
       loadModels = [ cfg.ollama.model ];
     };
 
-    systemd.services.journal-search = {
-      description = "Journal Search";
+    systemd.services.echo = {
+      description = "Echo";
       wantedBy = [ "multi-user.target" ];
       after = [
         "network-online.target"
       ]
-      ++ lib.optional cfg.database.createLocally "journal-search-init-db.service"
+      ++ lib.optional cfg.database.createLocally "echo-init-db.service"
       ++ lib.optional cfg.ollama.enable "ollama.service";
       wants = [ "network-online.target" ];
-      requires = lib.optional cfg.database.createLocally "journal-search-init-db.service";
+      requires = lib.optional cfg.database.createLocally "echo-init-db.service";
       environment = environment;
       serviceConfig = {
         ExecStart = lib.getExe cfg.package;

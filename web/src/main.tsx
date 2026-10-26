@@ -5,7 +5,7 @@ import App from "./App";
 import { AuthProvider } from "./lib/auth";
 import "./styles.css";
 
-const themeKey = "journal-theme";
+const themeKey = "echo-theme";
 const stored = localStorage.getItem(themeKey);
 if (stored === "light" || stored === "dark") {
   document.documentElement.setAttribute("data-theme", stored);

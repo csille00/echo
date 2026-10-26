@@ -1,4 +1,4 @@
--- Initial schema for journal-search (self-hosted PostgreSQL + pgvector)
+-- Initial schema for echo (self-hosted PostgreSQL + pgvector)
 
 CREATE EXTENSION IF NOT EXISTS vector;
 

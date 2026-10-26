@@ -53,4 +53,4 @@ USER appuser
 
 EXPOSE 8000
 
-CMD ["python", "-m", "journal_search"]
+CMD ["python", "-m", "echo"]

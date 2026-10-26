@@ -2,13 +2,13 @@
 
 import pytest
 
-from journal_search.adapters.auth.oidc import (
+from echo.adapters.auth.oidc import (
     OidcError,
     authorization_redirect,
     code_challenge,
     profile_from_claims,
 )
-from journal_search.config import Settings
+from echo.config import Settings
 
 
 def test_code_challenge_is_unpadded_s256() -> None:

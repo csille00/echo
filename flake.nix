@@ -62,24 +62,24 @@
         let
           pkgs = nixpkgs.legacyPackages.${system};
           pythonSet = pythonSets.${system};
-          venv = pythonSet.mkVirtualEnv "journal-search-env" workspace.deps.default;
+          venv = pythonSet.mkVirtualEnv "echo-env" workspace.deps.default;
           web = pkgs.callPackage ./nix/web.nix { };
         in
         {
           web = web;
           default = pkgs.stdenv.mkDerivation {
-            pname = "journal-search";
+            pname = "echo";
             version = "0.1.0";
             dontUnpack = true;
             nativeBuildInputs = [ pkgs.makeWrapper ];
             installPhase = ''
               runHook preInstall
               mkdir -p "$out/bin"
-              makeWrapper ${venv}/bin/python "$out/bin/journal-search" \
+              makeWrapper ${venv}/bin/python "$out/bin/echo" \
                 --prefix PATH : ${lib.makeBinPath [ pkgs.tesseract ]} \
                 --set-default WEB_ROOT ${web} \
                 --add-flags "-m" \
-                --add-flags "journal_search"
+                --add-flags "echo"
               runHook postInstall
             '';
             passthru = {
@@ -87,7 +87,7 @@
             };
             meta = {
               description = "Self-hosted journal OCR and semantic search";
-              mainProgram = "journal-search";
+              mainProgram = "echo";
               platforms = lib.platforms.linux;
             };
           };
@@ -137,19 +137,19 @@
             pkgs = nixpkgs.legacyPackages.x86_64-linux;
           in
           pkgs.testers.nixosTest {
-            name = "journal-search";
+            name = "echo";
             nodes.machine =
               { pkgs, ... }:
               {
                 imports = [ self.nixosModules.default ];
                 environment.systemPackages = [ pkgs.curl ];
-                services.journal-search = {
+                services.echo = {
                   enable = true;
                   ollama.enable = false;
                 };
               };
             testScript = ''
-              machine.wait_for_unit("journal-search.service")
+              machine.wait_for_unit("echo.service")
               machine.wait_for_open_port(8000)
               machine.succeed("curl -fsS http://127.0.0.1:8000/health")
               machine.succeed("curl -fsS http://127.0.0.1:8000/api/v1/auth/config | grep needs_setup")

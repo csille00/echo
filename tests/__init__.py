@@ -1,1 +1,1 @@
-"""Tests for journal-search."""
+"""Tests for echo."""

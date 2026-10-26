@@ -1,5 +1,5 @@
 [project]
-name = "journal-search"
+name = "echo"
 version = "0.1.0"
 description = "AI-powered journal search and OCR processing"
 readme = "README.md"
@@ -22,7 +22,7 @@ dependencies = [
 ]
 
 [project.scripts]
-journal-search = "journal_search.__main__:main"
+echo = "echo.__main__:main"
 
 [project.optional-dependencies]
 dev = [

@@ -6,9 +6,9 @@
 # file, not in this file.
 { ... }:
 {
-  services.journal-search = {
+  services.echo = {
     enable = true;
-    environmentFile = "/var/lib/journal-search/secrets.env";
+    environmentFile = "/var/lib/echo/secrets.env";
 
     # Overrides. The defaults are local accounts, Tesseract, and Ollama.
     settings = {

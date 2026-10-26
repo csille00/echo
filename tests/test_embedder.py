@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from journal_search.adapters.embedders.ollama import OllamaEmbedder
+from echo.adapters.embedders.ollama import OllamaEmbedder
 
 
 class TestOllamaEmbedder:

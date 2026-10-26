@@ -1,6 +1,6 @@
 """Tests for Vision reading-order reconstruction."""
 
-from journal_search.adapters.ocr.reading_order import text_from_bounding_boxes
+from echo.adapters.ocr.reading_order import text_from_bounding_boxes
 
 
 def _word(text: str, xmin: int) -> dict:

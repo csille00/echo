@@ -950,7 +950,7 @@ wheels = [
 ]
 
 [[package]]
-name = "journal-search"
+name = "echo"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

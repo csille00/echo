@@ -39,7 +39,7 @@ export function LoginPage() {
     return (
       <div className="login-screen">
         <div className="login-card">
-          <h1 className="large-title">Journal</h1>
+          <h1 className="large-title">Echo</h1>
           <p className="login-error">Cannot reach the journal API.</p>
         </div>
       </div>
@@ -57,7 +57,7 @@ export function LoginPage() {
     return (
       <div className="login-screen">
         <div className="login-card">
-          <h1 className="large-title">Journal</h1>
+          <h1 className="large-title">Echo</h1>
           <p className="footnote">
             Local dev: set <code>AUTH_BACKEND=dev_header</code> on the API and enter a user UUID.
           </p>
@@ -100,7 +100,7 @@ export function LoginPage() {
   return (
     <div className="login-screen">
       <div className="login-card">
-        <h1 className="large-title">Journal</h1>
+        <h1 className="large-title">Echo</h1>
         <p className="footnote">
           {setup
             ? "Create the admin account. This is the only open signup."

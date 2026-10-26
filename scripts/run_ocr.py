@@ -11,9 +11,9 @@ import httpx
 from dotenv import load_dotenv
 from pdf2image import convert_from_path
 
-from journal_search.adapters.ai_sdk.factory import create_ai_sdk_from_settings
-from journal_search.config import get_settings
-from journal_search.dependencies import (
+from echo.adapters.ai_sdk.factory import create_ai_sdk_from_settings
+from echo.config import get_settings
+from echo.dependencies import (
     create_ocr_provider_from_settings,
     create_text_cleanup_provider_from_settings,
 )

@@ -31,7 +31,7 @@ function ThemeToggle() {
       (!root.getAttribute("data-theme") &&
         window.matchMedia("(prefers-color-scheme: dark)").matches);
     root.setAttribute("data-theme", dark ? "light" : "dark");
-    localStorage.setItem("journal-theme", dark ? "light" : "dark");
+    localStorage.setItem("echo-theme", dark ? "light" : "dark");
   };
   return (
     <button type="button" className="theme-toggle" onClick={toggle}>
@@ -47,11 +47,11 @@ export function Layout() {
     <div className="app">
       {!apiReachable ? (
         <div className="api-banner" role="status">
-          Cannot reach the journal API.
+          Cannot reach Echo.
         </div>
       ) : null}
       <aside className="sidebar">
-        <div className="sidebar-brand">Journal</div>
+        <div className="sidebar-brand">Echo</div>
         <NavLink className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")} to="/">
           {navIcon.calendar}
           Calendar

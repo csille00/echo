@@ -5,8 +5,8 @@ from uuid import uuid4
 import pytest
 from starlette.requests import Request
 
-from journal_search.adapters.auth.authentik import AuthentikAuth
-from journal_search.config import Settings
+from echo.adapters.auth.authentik import AuthentikAuth
+from echo.config import Settings
 
 
 def _request(headers: list[tuple[bytes, bytes]]) -> Request:

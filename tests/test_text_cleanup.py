@@ -1,6 +1,6 @@
 """Tests for OCR text cleanup preprocessing."""
 
-from journal_search.adapters.text_cleanup.preprocess import join_lines, split_by_date
+from echo.adapters.text_cleanup.preprocess import join_lines, split_by_date
 
 
 class TestSplitByDate:
