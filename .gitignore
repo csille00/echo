@@ -67,6 +67,10 @@ prototypes/*/dist/
 # Web app
 web/node_modules/
 
+# Nix build outputs
+result
+result-*
+
 # OS
 .DS_Store
 Thumbs.db
