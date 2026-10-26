@@ -21,7 +21,7 @@ DBOS runs in this process and uses the same database. Conductor is optional: `do
 
 ```nix
 {
-  inputs.echo.url = "github:csille00/journal-search";
+  inputs.echo.url = "github:csille00/echo";
 
   outputs = { nixpkgs, echo, ... }: {
     nixosConfigurations.myhost = nixpkgs.lib.nixosSystem {
