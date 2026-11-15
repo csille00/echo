@@ -2,16 +2,15 @@
 
 import uvicorn
 
-from echo.api import create_app
 from echo.config import get_settings
 
 
 def main() -> None:
     settings = get_settings()
-    app = create_app(settings)
 
     uvicorn.run(
-        app,
+        "echo.api:create_app",
+        factory=True,
         host=settings.api_host,
         port=settings.listen_port,
         reload=settings.debug,
